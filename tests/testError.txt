@@ -1,0 +1,9 @@
+program miProg;
+
+vars {
+    num1, num2[] : int;
+}
+
+main() {
+    
+}

@@ -1,0 +1,62 @@
+program miPrograma;
+
+vars {
+    num1, num2[2], num3[4][5] : int;
+    flt1, flt2[100] : float;
+    ch : char;
+}
+
+function int pelos(int num1, float num2, char x) {
+    vars {
+        a, b, c : int;
+        d, e[10] : char;
+    }
+
+    a = num1;
+    e[0] = x;
+    e[a] = x;
+    b = num1 + 5 * num2;
+
+    return (num1);
+}
+
+function void pelos2(char ch, int miVar) {
+    vars {
+        n : int;
+    }
+
+    read(n);
+
+    if((miVar * 5 >= 1000) | (miVar == n)) {
+        print('Valor de n ', n);
+    } else {
+        print('Valor de n', n);
+    }
+}
+
+main() {
+    mean(num2);
+    median(num2);
+    mode(num2);
+    variance(num2);
+    stdev(num2);
+    min(num2);
+    max(num2);
+    plot2d(num2);
+
+    while(num1 > 0){
+        print('Hola');
+        num1 = num1 - 1;
+    }
+
+    do {
+        print('Adios');
+        num1 = num1 - 1;
+    } while (num1 > 0);
+
+    for(1 to 10) {
+        print('Pelos');
+    }
+
+    num3[0][0] = 5;
+}
