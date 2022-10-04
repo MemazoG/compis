@@ -28,9 +28,9 @@ function void pelos2(char ch, int miVar) {
     read(n);
 
     if((miVar * 5 >= 1000) | (miVar == n)) {
-        print('Valor de n ', n);
+        print("Valor de n ", n);
     } else {
-        print('Valor de n', n);
+        print("Valor de n", n);
     }
 }
 
@@ -44,18 +44,20 @@ main() {
     max(num2);
     plot2d(num2);
 
+    ch = "a";
+
     while(num1 > 0){
-        print('Hola');
+        print("Hola");
         num1 = num1 - 1;
     }
 
     do {
-        print('Adios');
+        print("Adios");
         num1 = num1 - 1;
     } while (num1 > 0);
 
     for(1 to 10) {
-        print('Pelos');
+        print("Pelos");
     }
 
     num3[0][0] = 5;
