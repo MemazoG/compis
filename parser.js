@@ -3,6 +3,7 @@
 // Exported to be used by other modules
 
 const Parser = require("jison").Parser
+require("./semantics/semantics")
 
 const grammar = {
     "lex": {
@@ -89,7 +90,17 @@ const grammar = {
     "bnf": {
         "start": [["program",   "console.log('todo bien')"]],
  
-        "program": [["PROGRAM ID ; vars_sec funcs_sec MAIN ( ) { statements } EOF", ""]],
+        "program": [["program_keyword program_id ; vars_sec funcs_sec MAIN ( ) { statements } EOF", ""]],
+
+        "program_keyword": [
+             ["PROGRAM",
+              "setProgramFuncType()"]
+        ],
+
+        "program_id": [
+             ["ID",
+              "addToFuncTable($1)"]
+         ],
 
         "type": [
              ["INT", ""],
