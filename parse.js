@@ -21,5 +21,4 @@ if(process.argv.length != 3) {
     
     // Parser input file
     const parseResult = parser.parse(input)
-    console.log(parseResult)
 }
