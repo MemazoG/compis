@@ -29,7 +29,6 @@ createFuncTable = () => {
 // Sets funcType to the value passed
 setCurrType = (t) => {
     currType = t
-    //console.log("Current type --> ", currType)
 }
 
 // Assigns the current function name to funcName
@@ -56,7 +55,6 @@ addFuncToFuncTable = (funcId) => {
 // Adds an id to idList (because we don't know their type yet)
 addIdToIdList = (id) => {
     idList.push(id)
-    //console.log(id)
 }
 
 // Adds a variable to the varTable of its respective function
@@ -67,8 +65,10 @@ addVarsToVarTable = () => {
         idList   --> Array with the names of the variables that will be added to the varTable
         currType --> Type of the variables
     */
-    console.log("FUNCNAME: ", funcName, "IDLIST: ", idList, "CURRTYPE: ", currType)
-    //Loop through idList and add each variable
+    
+    //console.log("FUNCNAME: ", funcName, "IDLIST: ", idList, "CURRTYPE: ", currType)
+    
+    // Loop through idList and add each variable
     for(let i=0; i<idList.length; i++) {
         if(funcTable.get(funcName).varTable.has(idList[i])) {
             throw new Error(`Multiple declaration. A variable with the name ${idList[i]} already exists`)
@@ -79,8 +79,8 @@ addVarsToVarTable = () => {
             })
         }
     }
-    console.log(funcTable.get(funcName))
-    console.log("")
+    //console.log(funcTable.get(funcName))
+    //console.log("")
 }
 
 // Clears the array idList because its contents have already been used
