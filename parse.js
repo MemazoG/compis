@@ -1,7 +1,6 @@
 // parse.js
 // Input  --> File to be parsed
 // Output --> Parses the file and prints the result (true if accepted, false if not)
-
 const parser = require("./parser")
 const { readFileSync } = require("fs")
 
@@ -11,8 +10,15 @@ const read = (filename) => {
     return content
 }
 
-// Reads file provided in input
-const input = read(process.argv[2])
-// Parser input file
-const parseResult = parser.parse(input)
-console.log(parseResult)
+
+
+if(process.argv.length != 3) {
+    console.log("Error      - Proporcione un archivo a escanear")
+    console.log("Expected   - node parse <archivo>")
+} else {
+    // Reads file provided in input
+    const input = read(process.argv[2])
+    
+    // Parser input file
+    const parseResult = parser.parse(input)
+}

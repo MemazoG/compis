@@ -3,6 +3,7 @@
 // Exported to be used by other modules
 
 const Parser = require("jison").Parser
+require("./semantics/semantics")
 
 const grammar = {
     "lex": {
@@ -87,14 +88,24 @@ const grammar = {
     },
 
     "bnf": {
-        "start": [["program",   "console.log('todo bien')"]],
+        "start": [["program",   "console.log('todo bien');"]],
  
-        "program": [["PROGRAM ID ; vars_sec funcs_sec MAIN ( ) { statements } EOF", ""]],
+        "program": [["program_keyword program_id ; vars_sec funcs_sec MAIN ( ) { statements } EOF", ""]],
+
+        "program_keyword": [
+             ["PROGRAM",
+              "createFuncTable();"]
+        ],
+
+        "program_id": [
+             ["ID",
+              "setCurrType('-'); currFuncName($1); addFuncToFuncTable($1);"]
+         ],
 
         "type": [
-             ["INT", ""],
-             ["FLOAT", ""],
-             ["CHAR", ""]
+             ["INT", "setCurrType($1);"],
+             ["FLOAT", "setCurrType($1);"],
+             ["CHAR", "setCurrType($1);"]
         ],
  
         "vars_sec": [
@@ -102,7 +113,22 @@ const grammar = {
              ["", ""]
         ],
  
-        "vars": [["VARS { ID var_arr vars_same_type : type ; mult_dec }", ""]],
+        "vars": [["vars_keyword { var_id_keyword var_arr vars_same_type : type add_vars ; mult_dec }", ""]],
+
+        "add_vars": [
+             ["",
+              "addVarsToVarTable(); clearIdList();"]
+        ],
+
+        "vars_keyword": [
+             ["VARS",
+              ""]
+        ],
+
+        "var_id_keyword": [
+             ["ID",
+              "addIdToIdList($1);"]
+        ],
  
         "var_arr": [
              ["[ CTE_INT ] var_mat", ""],
@@ -115,12 +141,12 @@ const grammar = {
         ],
  
         "vars_same_type": [
-             [", ID var_arr vars_same_type", ""],
+             [", var_id_keyword var_arr vars_same_type", ""],
              ["", ""]
         ],
  
         "mult_dec": [
-             ["ID vars_same_type : type ; mult_dec", ""],
+             ["var_id_keyword var_arr vars_same_type : type add_vars ; mult_dec", ""],
              ["", ""]
         ],
  
@@ -129,11 +155,16 @@ const grammar = {
              ["", ""]
         ],
  
-        "func": [["FUNCTION func_type ID ( params ) { vars_sec statements }", ""]],
+        "func": [["FUNCTION func_type func_id ( params ) { vars_sec statements }", ""]],
+
+        "func_id": [
+             ["ID",
+              "currFuncName($1); addFuncToFuncTable($1);"]
+        ],
  
         "func_type": [
              ["type", ""],
-             ["VOID", ""]
+             ["VOID", "setCurrType($1);"]
         ],
  
         "params": [
