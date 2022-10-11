@@ -1,0 +1,21 @@
+program helloWorld;
+
+vars {
+    a : int;
+    b, c, d : float;
+    e[10] : char;
+}
+
+function int hola() {
+
+}
+
+function void adios() {
+    vars {
+        x : int;
+    }
+}
+
+main() {
+
+}
