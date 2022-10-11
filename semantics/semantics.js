@@ -40,7 +40,7 @@ currFuncName = (name) => {
 addFuncToFuncTable = (funcId) => {
     // Checks if function already exists
     if(funcTable.has(funcId)) {
-        throw new Error(`A function with the name "${funcId}" already exists`)
+        throw new Error(`Multiple declaration. A function with the name "${funcId}" already exists`)
     }
     else {
         // Adds a new function with its name (key), type, and respective varTable
