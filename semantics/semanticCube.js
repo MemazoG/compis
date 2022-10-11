@@ -139,6 +139,11 @@ const semCube = {
     }
 }
 
+//const o1 = "int", o2 = "float", op = "*"
+//console.log(semCube[o1][o2][op])
 
-const o1 = "int", o2 = "float", op = "*"
-console.log(semCube[o1][o2][op])
+function semanticCube(operand1, operand2, operator) {
+    return semCube[operand1][operand2][operator]
+}
+
+module.exports = semanticCube
