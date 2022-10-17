@@ -90,31 +90,40 @@ const grammar = {
     "bnf": {
         "start": [["program",   "console.log('todo bien');"]],
  
+        // General program structure
         "program": [["program_keyword program_id ; vars_sec funcs_sec MAIN ( ) { statements } EOF", ""]],
 
+        // << NEURALGIC POINT >> - Creates functions directory after reading PROGRAM keyword
         "program_keyword": [
              ["PROGRAM",
               "createFuncTable();"]
         ],
 
+        // << NEURALGIC POINT >> - After reading the program's name, adds it to the functions directory
         "program_id": [
              ["ID",
-              "setCurrType('-'); currFuncName($1); addFuncToFuncTable($1);"]
+              "setCurrType('-'); setCurrFuncName($1); addFuncToFuncTable($1);"]
          ],
 
+        // << NEURALGIC POINT >> - After reading a type, assigns it to the currType variable
+        //                   currType is used when registering functions and variables
         "type": [
              ["INT", "setCurrType($1);"],
              ["FLOAT", "setCurrType($1);"],
              ["CHAR", "setCurrType($1);"]
         ],
  
+        // The variables section may or may not be empty
         "vars_sec": [
              ["vars", ""],
              ["", ""]
         ],
  
+        // General structure for declaring variables
         "vars": [["vars_keyword { var_id_keyword var_arr vars_same_type : type add_vars ; mult_dec }", ""]],
 
+        // << NEURALGIC POINT >> - After reading the type of the variables, proceed to add them to the variables directory
+        //                         of their respective function. Function name in this point is stored in funcName var
         "add_vars": [
              ["",
               "addVarsToVarTable(); clearIdList();"]
@@ -125,31 +134,38 @@ const grammar = {
               ""]
         ],
 
+        // << NEURALGIC POINT >> - After reading the name of a variable in the declaration section, adds it to the idList array.
+        //                         They are stored in an array because their type is not known yet.
         "var_id_keyword": [
              ["ID",
               "addIdToIdList($1);"]
         ],
  
+        // If var is an array or a matrix, follows first production. If not, follows empty production
         "var_arr": [
              ["[ CTE_INT ] var_mat", ""],
              ["", ""]
         ],
  
+        // If var is a matrix, follows first production. If not (it is an array), follows empty production
         "var_mat": [
              ["[ CTE_INT ]", ""],
              ["", ""]
         ],
  
+        // Multiple variables of the same type are declared (Example: a, b, c : int;)
         "vars_same_type": [
              [", var_id_keyword var_arr vars_same_type", ""],
              ["", ""]
         ],
  
+        // When a new line of variables is declared, preferably/ideally of a different type than the previous
         "mult_dec": [
              ["var_id_keyword var_arr vars_same_type : type add_vars ; mult_dec", ""],
              ["", ""]
         ],
  
+        // The functions section may or may not be empty
         "funcs_sec": [
              ["func funcs_sec", ""],
              ["", ""]
@@ -159,7 +175,7 @@ const grammar = {
 
         "func_id": [
              ["ID",
-              "currFuncName($1); addFuncToFuncTable($1);"]
+              "setCurrFuncName($1); addFuncToFuncTable($1);"]
         ],
  
         "func_type": [
