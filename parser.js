@@ -225,17 +225,26 @@ const grammar = {
  
         "read": [["READ ( var ) ;", ""]],
  
-        "write": [["PRINT ( write_ops mult_write ) ;", ""]],
+        // General structure for print statement
+        "write": [["PRINT ( write_ops gen_write_quad mult_write ) ;", ""]],
  
+        // << NEURALGIC POINT >> - Adds element to be printed to the operandStack
         "write_ops": [
-             ["var", ""],
-             ["CTE_STRING", ""]
+             ["var", "addToOperandStack($1)"],
+             ["CTE_STRING", "addToOperandStack($1)"]
         ],
  
+        // For print statement with multiple elements to be printed
         "mult_write": [
-             [", write_ops mult_write", ""],
+             [", write_ops gen_write_quad mult_write", ""],
              ["", ""]
         ],
+
+        // << NEURALGIC POINT >> - Generates a quadruple with the form [PRINT, , , res], with res being the element to be printed
+        "gen_write_quad": [
+             ["",
+              "generateWriteQuadruple()"]
+          ],
  
         "conditional": [["IF ( expression ) { statements } cond_else", ""]],
  

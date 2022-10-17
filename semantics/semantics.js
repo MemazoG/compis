@@ -9,6 +9,9 @@ const semanticCube = require("./semanticCube")
 //                               Variable Declarations
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
+// Quadruples
+let quadruples = []
+
 // Stacks used for intermediate code generation
 let operandStack = new Stack()
 let operatorStack = new Stack()
@@ -107,4 +110,25 @@ clearIdList = () => {
     idList = []
 }
 
-// Sets
+// Adds operand to operandStack
+addToOperandStack = (opd) => {
+    operandStack.push(opd)
+}
+
+// Adds operator to operatorStack
+addToOperatorStack = (oper) => {
+    operatorStack.push(oper)
+}
+
+// Generates a quadruple for a print statement
+generateWriteQuadruple = () => {
+    const res = operandStack.peek()
+    operandStack.pop()
+
+    generateQuadruple("print", "", "", res)
+}
+
+generateQuadruple = (op, opd1, opd2, res) => {
+    quadruples.push({op, opd1, opd2, res})
+    console.log(quadruples)
+}
