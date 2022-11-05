@@ -17,8 +17,8 @@ const semCube = {
             "<": "int",
             "==": "int",
             "!=": "int",
-            "&": "error",
-            "|": "error",
+            "&": "int",
+            "|": "int",
         },
         float: {
             "+": "float",

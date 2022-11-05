@@ -1,0 +1,9 @@
+program testPar;
+
+vars {
+    a, b, c, d, e, f, g, h, i, j, k, l, m : int;
+}
+
+main() {
+    a = ((a * b - c * d) > c + d * e / f) & (g * h - j > l - a) & b + c > d * f;
+}
