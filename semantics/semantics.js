@@ -237,6 +237,36 @@ assignToVar = () => {
     generateQuadruple(op, exprRes, "-", varName)
 }
 
+// Gets condition result from the if-statement and generates its quadruple
+ifStart = () => {
+    // Get condition (expression) result and its type
+    const cond = operandStack.peek()
+    const condType = typeStack.peek()
+    operandStack.pop()
+    typeStack.pop()
+   
+    // Check condition type
+    if(condType !== "int") {
+        throw new Error(`Type mismatch. Expression result needs to be of type int`)
+    }
+
+    // Generate quadruple (GotoF)
+    generateQuadruple("gotoF", cond, "-", "?")
+
+    // Register into jumpStack to return and complete quadruple when possible
+    jumpStack.push(quadruples.length - 1)
+}
+
+// Completes gotoF quadruple of ifStart
+ifEnd = () => {
+    // Get quadruple index to complete
+    const out = jumpStack.peek()
+    jumpStack.pop()
+
+    // Complete quadruple
+    quadruples[out].res = quadruples.length
+}
+
 
 endStuff = () => {
     console.log("- - - QUADRUPLES - - -")

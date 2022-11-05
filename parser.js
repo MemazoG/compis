@@ -261,11 +261,13 @@ const grammar = {
               "generateWriteQuadruple()"]
           ],
  
-        "conditional": [["IF ( expression ) { statements } cond_else", ""]],
+        "conditional": [["IF ( expression cond_if ) { statements } cond_else", ""]],
+
+        "cond_if": [["", "ifStart()"]],
  
         "cond_else": [
              ["ELSE else_type", ""],
-             ["", ""]
+             ["", "ifEnd()"]
         ],
  
         "else_type": [
