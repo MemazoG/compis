@@ -88,33 +88,42 @@ const grammar = {
     },
 
     "bnf": {
-        "start": [["program",   "console.log('todo bien');"]],
+        "start": [["program",   "endStuff();"]],
  
+        // General program structure
         "program": [["program_keyword program_id ; vars_sec funcs_sec MAIN ( ) { statements } EOF", ""]],
 
+        // << NEURALGIC POINT >> - Creates functions directory after reading PROGRAM keyword
         "program_keyword": [
              ["PROGRAM",
               "createFuncTable();"]
         ],
 
+        // << NEURALGIC POINT >> - After reading the program's name, adds it to the functions directory
         "program_id": [
              ["ID",
-              "setCurrType('-'); currFuncName($1); addFuncToFuncTable($1);"]
+              "setCurrType('-'); setCurrFuncName($1); addFuncToFuncTable($1);"]
          ],
 
+        // << NEURALGIC POINT >> - After reading a type, assigns it to the currType variable
+        //                   currType is used when registering functions and variables
         "type": [
              ["INT", "setCurrType($1);"],
              ["FLOAT", "setCurrType($1);"],
              ["CHAR", "setCurrType($1);"]
         ],
  
+        // The variables section may or may not be empty
         "vars_sec": [
              ["vars", ""],
              ["", ""]
         ],
  
+        // General structure for declaring variables
         "vars": [["vars_keyword { var_id_keyword var_arr vars_same_type : type add_vars ; mult_dec }", ""]],
 
+        // << NEURALGIC POINT >> - After reading the type of the variables, proceed to add them to the variables directory
+        //                         of their respective function. Function name in this point is stored in funcName var
         "add_vars": [
              ["",
               "addVarsToVarTable(); clearIdList();"]
@@ -125,31 +134,38 @@ const grammar = {
               ""]
         ],
 
+        // << NEURALGIC POINT >> - After reading the name of a variable in the declaration section, adds it to the idList array.
+        //                         They are stored in an array because their type is not known yet.
         "var_id_keyword": [
              ["ID",
               "addIdToIdList($1);"]
         ],
  
+        // If var is an array or a matrix, follows first production. If not, follows empty production
         "var_arr": [
              ["[ CTE_INT ] var_mat", ""],
              ["", ""]
         ],
  
+        // If var is a matrix, follows first production. If not (it is an array), follows empty production
         "var_mat": [
              ["[ CTE_INT ]", ""],
              ["", ""]
         ],
  
+        // Multiple variables of the same type are declared (Example: a, b, c : int;)
         "vars_same_type": [
              [", var_id_keyword var_arr vars_same_type", ""],
              ["", ""]
         ],
  
+        // When a new line of variables is declared, preferably/ideally of a different type than the previous
         "mult_dec": [
              ["var_id_keyword var_arr vars_same_type : type add_vars ; mult_dec", ""],
              ["", ""]
         ],
  
+        // The functions section may or may not be empty
         "funcs_sec": [
              ["func funcs_sec", ""],
              ["", ""]
@@ -159,7 +175,7 @@ const grammar = {
 
         "func_id": [
              ["ID",
-              "currFuncName($1); addFuncToFuncTable($1);"]
+              "setCurrFuncName($1); addFuncToFuncTable($1);"]
         ],
  
         "func_type": [
@@ -205,21 +221,45 @@ const grammar = {
              ["sp_func", ""]
         ],
  
-        "assignment": [["var = expression ;", ""]],
- 
-        "read": [["READ ( var ) ;", ""]],
- 
-        "write": [["PRINT ( write_ops mult_write ) ;", ""]],
- 
-        "write_ops": [
-             ["var", ""],
-             ["CTE_STRING", ""]
+        // General structure for assignment statement. Assigns the result of an expression to a variable
+        "assignment": [["var_name_assignment eq_operator expression ;", "assignToVar()"]],
+
+        // << NEURALGIC POINT >> - After reading the name of the variable, adds it to operandStack
+        //                         to keep track of it
+        "var_name_assignment": [
+            ["var", "addToOperandStack($1); addToTypeStack($1)"]
+        ],
+
+        // << NEURALGIC POINT >> - Add equal sign to operatorStack
+        "eq_operator": [
+             ["=", "addToOperatorStack($1)"]
         ],
  
+        // General structure for read statement
+        "read": [["READ ( read_var ) ;", ""]],
+
+        "read_var": [["var", "generateReadQuadruple($1)"]],
+ 
+        // General structure for print statement
+        "write": [["PRINT ( write_ops gen_write_quad mult_write ) ;", ""]],
+ 
+        // << NEURALGIC POINT >> - Adds element to be printed to the operandStack
+        "write_ops": [
+             ["var", "addToOperandStack($1)"],
+             ["CTE_STRING", "addToOperandStack($1)"]
+        ],
+ 
+        // For print statement with multiple elements to be printed
         "mult_write": [
-             [", write_ops mult_write", ""],
+             [", write_ops gen_write_quad mult_write", ""],
              ["", ""]
         ],
+
+        // << NEURALGIC POINT >> - Generates a quadruple with the form [PRINT, , , res], with res being the element to be printed
+        "gen_write_quad": [
+             ["",
+              "generateWriteQuadruple()"]
+          ],
  
         "conditional": [["IF ( expression ) { statements } cond_else", ""]],
  
@@ -261,55 +301,162 @@ const grammar = {
  
          "return": [["RETURN ( expression ) ;", ""]],
  
-         "expression": [["and_expression exp_comp", ""]],
- 
+         // General structure for an expression. Starts with operators of least priority and works towards
+         // those with the most priority
+         "expression": [["and_expression_check exp_comp", ""]],
+         
+         // Compound expression with | operator
          "exp_comp": [
-             ["| expression", ""],
+             ["or_sign expression", ""],
              ["", ""]
          ],
+
+         // << NEURALGIC POINT >> - Checks operatorStack for | symbol to see if it solves or continues
+         "and_expression_check": [
+             ["and_expression", "checkOperatorStack(['|'])"]
+         ],
+
+         // << NEURALGIC POINT >> - Add | to operatorStack
+         "or_sign": [
+             ["|", "addToOperatorStack($1)"]
+         ],
  
-         "and_expression": [["relop_expression and_exp_comp", ""]],
+         // General structure for expression with &
+         "and_expression": [["relop_expression_check and_exp_comp", ""]],
  
+         // Compound expression with & operator
          "and_exp_comp": [
-             ["& and_expression", ""],
+             ["and_sign and_expression", ""],
              ["", ""]
          ],
+
+         // << NEURALGIC POINT >> - Checks operatorStack for & to see if it solves or continues
+         "relop_expression_check": [
+             ["relop_expression", "checkOperatorStack(['&'])"]
+         ],
+
+         // << NEURALGIC POINT >> - Add & to operatorStack
+         "and_sign": [
+             ["&", "addToOperatorStack($1)"]
+         ],
  
-         "relop_expression": [["arit_expression relop_exp_comp", ""]],
+         // General structure for expressions with relational operators
+         "relop_expression": [["arit_expression_check relop_exp_comp", ""]],
  
+         // Compound expression involving relational operators
          "relop_exp_comp": [
-             [">= arit_expression", ""],
-             ["<= arit_expression", ""],
-             ["> arit_expression", ""],
-             ["< arit_expression", ""],
-             ["== arit_expression", ""],
-             ["!= arit_expression", ""],
+             ["gte_sign relop_expression", ""],
+             ["lte_sign relop_expression", ""],
+             ["gt_sign relop_expression", ""],
+             ["lt_sign relop_expression", ""],
+             ["eq_sign relop_expression", ""],
+             ["diff_sign relop_expression", ""],
              ["", ""]
          ],
+
+         // << NEURALGIC POINT >> - Checks operatorStack for a relational operator to see if it solves or continues
+         "arit_expression_check": [
+             ["arit_expression", "checkOperatorStack(['>=', '<=', '>', '<', '==', '!='])"]
+         ],
+
+         // << NEURALGIC POINT >> - Add >= to operatorStack
+         "gte_sign": [
+            [">=", "addToOperatorStack($1)"]
+         ],
+
+         // << NEURALGIC POINT >> - Add <= to operatorStack
+         "lte_sign": [
+            ["<=", "addToOperatorStack($1)"]
+         ],
+
+         // << NEURALGIC POINT >> - Add > to operatorStack
+         "gt_sign": [
+            [">", "addToOperatorStack($1)"]
+         ],
+
+         // << NEURALGIC POINT >> - Add < to operatorStack
+         "lt_sign": [
+            ["<", "addToOperatorStack($1)"]
+         ],
+
+         // << NEURALGIC POINT >> - Add == to operatorStack
+         "eq_sign": [
+            ["==", "addToOperatorStack($1)"]
+         ],
+
+         // << NEURALGIC POINT >> - Add != to operatorStack
+         "diff_sign": [
+            ["!=", "addToOperatorStack($1)"]
+         ],
+       
+         // General structure for arithmetic expression with + or -
+         "arit_expression": [["term_check arit_exp_comp", ""]],
  
-         "arit_expression": [["term arit_exp_comp", ""]],
- 
+         // Compound expression with + or -
          "arit_exp_comp": [
-             ["+ arit_expression", ""],
-             ["- arit_expression", ""],
+             ["plus_sign arit_expression", ""],
+             ["minus_sign arit_expression", ""],
              ["", ""]
          ],
+
+         // << NEURALGIC POINT >> - Checks operatorStack for + or - to see if it solves or continues
+         "term_check": [
+             ["term", "checkOperatorStack(['+','-'])"]
+         ],
+
+         // << NEURALGIC POINT >> - Add + to operatorStack
+         "plus_sign": [
+             ["+", "addToOperatorStack($1)"]
+         ],
+
+         // << NEURALGIC POINT >> - Add - to operatorStack
+         "minus_sign": [
+          ["-", "addToOperatorStack($1)"]
+         ],
  
-         "term": [["factor term_comp", ""]],
+         // General structure for arithmetic expression with * or /
+         "term": [["factor_check term_comp", ""]],
  
+         // Compound expression with * or /
          "term_comp": [
-             ["* term", ""],
-             ["/ term", ""],
+             ["mult_sign term", ""],
+             ["div_sign term", ""],
              ["", ""]
          ],
+
+         // << NEURALGIC POINT >> - Checks operatorStack for * or / to see if it solves or continues
+         "factor_check": [
+             ["factor", "checkOperatorStack(['*','/'])"]
+         ],
+
+         // << NEURALGIC POINT >> - Add * to operatorStack
+         "mult_sign": [
+             ["*", "addToOperatorStack($1)"]
+         ],
+
+         // << NEURALGIC POINT >> - Add / to operatorStack
+         "div_sign": [
+             ["/", "addToOperatorStack($1)"]
+         ],
  
+         // Innermost part of an expression. Can be a constant, a variable, a function call, or a new expression between parentheses
          "factor": [
-             ["( expression )", ""],
+             ["open_par expression close_par", ""],
              ["CTE_INT", ""],
              ["CTE_FLOAT", ""],
              ["CTE_CHAR", ""],
-             ["var", ""],
+             ["var", "addToOperandStack($1); addToTypeStack($1);"],
              ["func_call", "console.log('Llamada a funcion')"]
+         ],
+
+         // << NEURALGIC POINT >> - Adds a special symbol into operatorStack to simulate a "fake bottom". Helps when dealing with parentheses
+         "open_par": [
+             ["(", "insertFakeBottom()"]
+         ],
+
+         // << NEURALGIC POINT >> - Removes the special symbol from operatorStack. The expression between parentheses has ended
+          "close_par": [
+             [")", "removeFakeBottom()"]
          ],
  
          "func_call": [["ID ( args ) ;", ""]],

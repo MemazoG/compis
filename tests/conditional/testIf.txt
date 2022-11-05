@@ -1,0 +1,15 @@
+program testIfElse;
+
+vars {
+    a, b, c : int;
+    x, y, z : float;
+}
+
+main() {
+    a = a*(b-c);
+    x = y/z;
+
+    if(a>b) {
+        print("Hola");
+    }
+}

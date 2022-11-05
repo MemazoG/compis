@@ -1,0 +1,12 @@
+program testRW;
+
+vars {
+    foo : int;
+}
+
+main() {
+    print("Hola ingresa un valor para foo");
+    read(foo);
+    print("Gracias");
+    print("foo ahora es igual a ", foo);
+}

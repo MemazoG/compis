@@ -1,0 +1,11 @@
+program testExpArit;
+
+vars {
+    a, b, c, d : int;
+    w, x, y, z : float;
+    ch : char;
+}
+
+main() {
+    a = a + b * c / d;
+}

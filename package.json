@@ -18,6 +18,8 @@
   },
   "homepage": "https://github.com/MemazoG/compis#readme",
   "dependencies": {
-    "jison": "^0.4.18"
+    "jison": "^0.4.18",
+    "queue-fifo": "^0.2.6",
+    "stack-lifo": "^0.1.6"
   }
 }
