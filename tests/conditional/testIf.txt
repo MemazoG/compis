@@ -1,15 +1,13 @@
-program testIfElse;
+program testIf;
 
 vars {
-    a, b, c : int;
+    a, b, c, d : int;
     x, y, z : float;
 }
 
 main() {
-    a = a*(b-c);
-    x = y/z;
-
-    if(a>b) {
-        print("Hola");
+    if(a*b > c/d) {
+        a = c + d;
     }
+    d = a + b;
 }

@@ -239,6 +239,7 @@ assignToVar = () => {
 
 // Gets condition result from the if-statement and generates its quadruple
 ifStart = () => {
+    console.log("ABRIO EL IF")
     // Get condition (expression) result and its type
     const cond = operandStack.peek()
     const condType = typeStack.peek()
@@ -253,18 +254,34 @@ ifStart = () => {
     // Generate quadruple (GotoF)
     generateQuadruple("gotoF", cond, "-", "?")
 
-    // Register into jumpStack to return and complete quadruple when possible
+    // Register goToF quadruple into jumpStack
     jumpStack.push(quadruples.length - 1)
 }
 
 // Completes gotoF quadruple of ifStart
 ifEnd = () => {
-    // Get quadruple index to complete
+    // Get quadruple index from jumpStack
     const out = jumpStack.peek()
     jumpStack.pop()
 
     // Complete quadruple
     quadruples[out].res = quadruples.length
+}
+
+// Generates gotTo quadruple and completes goToF quadruple of ifStart
+elseStmt = () => {
+    // Generate goTo quadruple
+    generateQuadruple("goTo", "-", "-", "?")
+
+    // Get quadruple index from jumpStack
+    const gotofQuad = jumpStack.peek()
+    jumpStack.pop()
+
+    // Complete quadruple
+    quadruples[gotofQuad].res = quadruples.length
+
+    // Register goTo quadruple into jumpStack
+    jumpStack.push(quadruples.length - 1)
 }
 
 

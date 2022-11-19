@@ -120,12 +120,12 @@ const grammar = {
         ],
  
         // General structure for declaring variables
-        "vars": [["vars_keyword { var_id_keyword var_arr vars_same_type : type add_vars ; mult_dec }", ""]],
+        "vars": [["vars_keyword { var_id_keyword var_arr vars_same_type : type semicolon_vars mult_dec }", ""]],
 
         // << NEURALGIC POINT >> - After reading the type of the variables, proceed to add them to the variables directory
         //                         of their respective function. Function name in this point is stored in funcName var
-        "add_vars": [
-             ["",
+        "semicolon_vars": [
+             [";",
               "addVarsToVarTable(); clearIdList();"]
         ],
 
@@ -161,7 +161,7 @@ const grammar = {
  
         // When a new line of variables is declared, preferably/ideally of a different type than the previous
         "mult_dec": [
-             ["var_id_keyword var_arr vars_same_type : type add_vars ; mult_dec", ""],
+             ["var_id_keyword var_arr vars_same_type : type semicolon_vars mult_dec", ""],
              ["", ""]
         ],
  
@@ -241,38 +241,38 @@ const grammar = {
         "read_var": [["var", "generateReadQuadruple($1)"]],
  
         // General structure for print statement
-        "write": [["PRINT ( write_ops gen_write_quad mult_write ) ;", ""]],
+        "write": [["PRINT ( write_ops mult_write ) ;", ""]],
  
         // << NEURALGIC POINT >> - Adds element to be printed to the operandStack
+        //                         Generates a quadruple with the form [PRINT, , , res], with res being the element to be printed
         "write_ops": [
-             ["var", "addToOperandStack($1)"],
-             ["CTE_STRING", "addToOperandStack($1)"]
+             ["var", "addToOperandStack($1); generateWriteQuadruple();"],
+             ["CTE_STRING", "addToOperandStack($1); generateWriteQuadruple();"]
         ],
  
         // For print statement with multiple elements to be printed
         "mult_write": [
-             [", write_ops gen_write_quad mult_write", ""],
+             [", write_ops mult_write", ""],
              ["", ""]
         ],
-
-        // << NEURALGIC POINT >> - Generates a quadruple with the form [PRINT, , , res], with res being the element to be printed
-        "gen_write_quad": [
-             ["",
-              "generateWriteQuadruple()"]
-          ],
  
-        "conditional": [["IF ( expression cond_if ) { statements } cond_else", ""]],
+        // General structure for the if statement
+        "conditional": [["IF ( expression par_close_if { statements } cond_else", ""]],
 
-        "cond_if": [["", "ifStart()"]],
+        // << NEURALGIC POINT >> - Right after the expression/condition is evaluated, calls a function that checks its type and
+        //                         generates the goToF quadruple
+        "par_close_if": [[")", "ifStart()"]],
  
+        // General structure for the else statement
+        // If empty (an if with no else) calls a function that completes the goToF quadruple with where it needs to go
         "cond_else": [
-             ["ELSE else_type", ""],
+             ["else_keyword { statements }", "ifEnd()"],
              ["", "ifEnd()"]
         ],
- 
-        "else_type": [
-             ["{ statements }", ""],
-             ["conditional", ""]
+
+        // << NEURALGIC POINT >> - When reading else keyword, calls a function that completes the goToF quadruple and generates a goTo quadruple
+        "else_keyword": [
+             ["ELSE", "elseStmt()"]
         ],
  
         "loop": [
