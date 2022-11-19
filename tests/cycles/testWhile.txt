@@ -1,0 +1,19 @@
+program testWhile;
+
+vars {
+    a, b, c, d, e : int;
+}
+
+main() {
+    a = b + c;
+    while(a > b * c) {
+        b = c + a;
+        if(c + a) {
+            c = b + c;
+        } else {
+            a = b - c;
+        }
+    }
+    e = a + b;
+    print(a, b, c);
+}

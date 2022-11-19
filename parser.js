@@ -281,7 +281,11 @@ const grammar = {
              ["for_loop", ""]
         ],
  
-        "while_loop": [["WHILE ( expression ) { statements }", ""]],
+        "while_loop": [["WHILE open_par_while expression close_par_while { statements }", "whileEnd()"]],
+
+        "open_par_while": [["(", "whileBreadcrumb()"]],
+
+        "close_par_while": [[")", "whileStart()"]],
  
         "do_while_loop": [["DO { statements } WHILE ( expression ) ;", ""]],
  
