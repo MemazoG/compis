@@ -351,6 +351,17 @@ doWhileEnd = () => {
     generateQuadruple("goToV", cond, "-", ret)
 }
 
+// Generates a goTo quadruple that will be filled out when MAIN begins
+// I do not register anthing to jumpStack because I know this will ALWAYS be the first quadruple
+generateGoToMainQuadruple = () => {
+    generateQuadruple("goTo", "-", "-", "?")
+}
+
+// Completes goTo main quadruple, which is the first quadruple
+mainStart = () => {
+    quadruples[0].res = quadruples.length
+}
+
 
 
 

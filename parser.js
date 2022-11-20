@@ -91,13 +91,16 @@ const grammar = {
         "start": [["program",   "endStuff();"]],
  
         // General program structure
-        "program": [["program_keyword program_id ; vars_sec funcs_sec MAIN ( ) { statements } EOF", ""]],
+        "program": [["program_keyword program_id ; vars_sec funcs_sec MAIN ( ) open_cb_main statements } EOF", ""]],
 
         // << NEURALGIC POINT >> - Creates functions directory after reading PROGRAM keyword
         "program_keyword": [
              ["PROGRAM",
-              "createFuncTable();"]
+              "createFuncTable(); generateGoToMainQuadruple();"]
         ],
+
+        // << NEURALGIC POINT >> - Calls mainStart function, which completes goTo MAIN quadruple, just before MAIN's statements begin
+        "open_cb_main": [["{", "mainStart()"]],
 
         // << NEURALGIC POINT >> - After reading the program's name, adds it to the functions directory
         "program_id": [
