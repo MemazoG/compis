@@ -281,13 +281,23 @@ const grammar = {
              ["for_loop", ""]
         ],
  
+        // General structure for the while statement
         "while_loop": [["WHILE open_par_while expression close_par_while { statements }", "whileEnd()"]],
 
+        // << NEURALGIC POINT >> - Leaves a "breadcrumb" in order to know where to return an re-evaluate the condition
         "open_par_while": [["(", "whileBreadcrumb()"]],
 
+        // << NEURALGIC POINT >> - Evaluates condition and generates (incomplete at first) goToF quadruple
         "close_par_while": [[")", "whileStart()"]],
  
-        "do_while_loop": [["DO { statements } WHILE ( expression ) ;", ""]],
+        // General structure for the do-while statement
+        "do_while_loop": [["DO open_cb_do_w statements } WHILE ( expression close_par_do_w ;", ""]],
+
+        // << NEURALGIC POINT >> - Leaves a "breadcrumb" in order to know where to return if the condition is true
+        "open_cb_do_w": [["{", "doWhileBreadcrumb()"]],
+
+        // << NEURALGIC POINT >> - Evaluates condition and generates goToV quadruple
+        "close_par_do_w": [[")", "doWhileEnd()"]],
  
         "for_loop": [["FOR ( for_type TO for_type ) { statements }", ""]],
  

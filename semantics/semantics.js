@@ -286,7 +286,6 @@ elseStmt = () => {
 // Saves point BEFORE the while's condition is evaluated
 whileBreadcrumb = () => {
     jumpStack.push(quadruples.length)
-    console.log("BREADCRUMB", quadruples.length)
 }
 
 // Gets condition result from while-statement, generates its goToF quadruple, and saves point in jumpStack
@@ -307,8 +306,6 @@ whileStart = () => {
 
     // Register goToF quadruple into jumpStack
     jumpStack.push(quadruples.length - 1)
-
-    console.log("AFTER COND", quadruples.length-1)
 }
 
 // Generates goTo quadruple for cycling and fills out incomplete gotoF quadruple from whileStart
@@ -327,6 +324,34 @@ whileEnd = () => {
     // Complete goToF quadruple
     quadruples[gotofQuad].res = quadruples.length
 }
+
+// Saves point before block of statements begin in do-while
+doWhileBreadcrumb = () => {
+    jumpStack.push(quadruples.length)
+}
+
+// Gets breadcrumb from jumpStack, gets condition result from operandStack, and generates goToV quadruple
+doWhileEnd = () => {
+    // Retrieve "breadcrumb" (where block of statements begins)
+    const ret = jumpStack.peek()
+    jumpStack.pop()
+
+    // Get condition (expression) result and its type
+    const cond = operandStack.peek()
+    const condType = typeStack.peek()
+    operandStack.pop()
+    typeStack.pop()
+
+    // Check condition type
+    if(condType !== "int") {
+        throw new Error(`Type mismatch. Expression result needs to be of type int`)
+    }
+
+    // Generate goToV quadruple
+    generateQuadruple("goToV", cond, "-", ret)
+}
+
+
 
 
 endStuff = () => {

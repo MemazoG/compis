@@ -1,0 +1,24 @@
+program testDoWhile;
+
+vars {
+    a, b, c, d, e : int;
+}
+
+main() {
+    while(a + b * c < d) {
+        if(a + b < c) {
+            a = b + c;
+            do {
+                a = a - b;
+            }
+            while(a > b + c);
+        } else {
+            while(b > c + d) {
+                a = b + c * d;
+                b = a - d;
+            }
+        }
+    }
+    a = b * c;
+    c = d;
+}
