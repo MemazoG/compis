@@ -20,6 +20,7 @@ node parse <archivo>
 | 3/10/2022 | 1 | **Léxico y Sintaxis**. Se reconocen los tokens y las estructuras gramaticales definidas en la propuesta | `parser.js` `parse.js` `testBasico.txt` `testError.txt` | - |
 | 10/10/2022 | 2 | **Directorio de procedimientos, tabla de variables y cubo semántico**. Cubo semántico declarado. Funciones se agregan al directorio de funciones y variables se agregan al directorio de variables de su respectiva función. | `semantics.js` `semanticCube.js` `testFuncsVars.txt` | `parser.js` `parse.js` |
 | 17/10/2022 | 3 | **Generación de código de expresiones y estatutos lineales**. Cuádruplos generados para estatutos de read, write, asignación y expresiones en general. Pendiente cuádruplos para funciones especiales. | `testExpArit.txt` `testParentheses.txt` `testIf.txt` | `parser.js` `semanticCube.js` `semantics.js` |
+| 4/11/2022 | 4 | **Generación de código de estatutos condicionales y cíclicos**. Cuádruplos generados para estatutos condicionales (if-else) y cíclicos (while y do-while) | `testIfElse.txt` `testWhile.txt` `testDoWhile.txt` | `parser.js` `semantics.js` |
 
 ## Autor: Guillermo Andrés García Vázquez
 - [@MemazoG](https://github.com/MemazoG)

@@ -237,6 +237,122 @@ assignToVar = () => {
     generateQuadruple(op, exprRes, "-", varName)
 }
 
+// Gets condition result from the if-statement and generates its quadruple
+ifStart = () => {
+    // Get condition (expression) result and its type
+    const cond = operandStack.peek()
+    const condType = typeStack.peek()
+    operandStack.pop()
+    typeStack.pop()
+   
+    // Check condition type
+    if(condType !== "int") {
+        throw new Error(`Type mismatch. Expression result needs to be of type int`)
+    }
+
+    // Generate quadruple (GotoF)
+    generateQuadruple("gotoF", cond, "-", "?")
+
+    // Register goToF quadruple into jumpStack
+    jumpStack.push(quadruples.length - 1)
+}
+
+// Completes gotoF quadruple of ifStart
+ifEnd = () => {
+    // Get quadruple index from jumpStack
+    const out = jumpStack.peek()
+    jumpStack.pop()
+
+    // Complete quadruple
+    quadruples[out].res = quadruples.length
+}
+
+// Generates gotTo quadruple and completes goToF quadruple of ifStart
+elseStmt = () => {
+    // Generate goTo quadruple
+    generateQuadruple("goTo", "-", "-", "?")
+
+    // Get quadruple index from jumpStack
+    const gotofQuad = jumpStack.peek()
+    jumpStack.pop()
+
+    // Complete quadruple
+    quadruples[gotofQuad].res = quadruples.length
+
+    // Register goTo quadruple into jumpStack
+    jumpStack.push(quadruples.length - 1)
+}
+
+// Saves point BEFORE the while's condition is evaluated
+whileBreadcrumb = () => {
+    jumpStack.push(quadruples.length)
+}
+
+// Gets condition result from while-statement, generates its goToF quadruple, and saves point in jumpStack
+whileStart = () => {
+    // Get condition (expression) result and its type
+    const cond = operandStack.peek()
+    const condType = typeStack.peek()
+    operandStack.pop()
+    typeStack.pop()
+
+    // Check condition type
+    if(condType !== "int") {
+        throw new Error(`Type mismatch. Expression result needs to be of type int`)
+    }
+
+    // Generate quadruple (GotoF)
+    generateQuadruple("gotoF", cond, "-", "?")
+
+    // Register goToF quadruple into jumpStack
+    jumpStack.push(quadruples.length - 1)
+}
+
+// Generates goTo quadruple for cycling and fills out incomplete gotoF quadruple from whileStart
+whileEnd = () => {
+    // Get goToF quadruple index
+    const gotofQuad = jumpStack.peek()
+    jumpStack.pop()
+
+    // Get quadruple index where expression evaluation begins
+    const returnToCond = jumpStack.peek()
+    jumpStack.pop()
+
+    // Generate goTo quadruple
+    generateQuadruple("goTo", "-", "-", returnToCond)
+
+    // Complete goToF quadruple
+    quadruples[gotofQuad].res = quadruples.length
+}
+
+// Saves point before block of statements begin in do-while
+doWhileBreadcrumb = () => {
+    jumpStack.push(quadruples.length)
+}
+
+// Gets breadcrumb from jumpStack, gets condition result from operandStack, and generates goToV quadruple
+doWhileEnd = () => {
+    // Retrieve "breadcrumb" (where block of statements begins)
+    const ret = jumpStack.peek()
+    jumpStack.pop()
+
+    // Get condition (expression) result and its type
+    const cond = operandStack.peek()
+    const condType = typeStack.peek()
+    operandStack.pop()
+    typeStack.pop()
+
+    // Check condition type
+    if(condType !== "int") {
+        throw new Error(`Type mismatch. Expression result needs to be of type int`)
+    }
+
+    // Generate goToV quadruple
+    generateQuadruple("goToV", cond, "-", ret)
+}
+
+
+
 
 endStuff = () => {
     console.log("- - - QUADRUPLES - - -")
