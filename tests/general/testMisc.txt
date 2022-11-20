@@ -1,0 +1,16 @@
+program testMisc;
+
+vars {
+    a, b, c : int;
+}
+
+main() {
+    a = b + c;
+    b = c * a - c;
+    if(a < b) {
+        c = a * a;
+    } else {
+        c = b;
+    }
+    b = a;
+}

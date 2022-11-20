@@ -105,7 +105,7 @@ const grammar = {
         // << NEURALGIC POINT >> - After reading the program's name, adds it to the functions directory
         "program_id": [
              ["ID",
-              "setCurrType('-'); setCurrFuncName($1); addFuncToFuncTable($1);"]
+              "setCurrType('-'); setCurrFuncName($1); addFuncToFuncTable($1); setProgramId($1);"]
          ],
 
         // << NEURALGIC POINT >> - After reading a type, assigns it to the currType variable

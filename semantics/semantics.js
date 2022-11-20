@@ -1,13 +1,20 @@
 // semantics.js
 // Language's semantic rules
 
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+//                                      Imports
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 let Queue = require("queue-fifo")
 let Stack = require("stack-lifo")
 const semanticCube = require("./semanticCube")
+const VirtualMemory = require("./virtualMemory")
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 //                               Variable Declarations
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+// Virtual memory
+let virtualMemory = null
 
 // Quadruples
 let quadruples = []
@@ -21,6 +28,9 @@ let jumpStack = new Stack()
 // DS to deal with temps
 let temps = ["t1", "t2", "t3", "t4", "t5", "t6", "t7", "t8", "t9", "t10", "t11", "t12", "t13", "t14", "t15", "t16", "t17", "t18", "t19", "t20"]
 let temp_i = 0
+
+// Program name
+let programName = ""
 
 // Functions table
 let funcTable = null
@@ -42,9 +52,10 @@ let idList = []
 //                                      Functions
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-// Creates funcTable
+// Creates funcTable and initializes the virtual memory
 createFuncTable = () => {
     funcTable = new Map()
+    virtualMemory = new VirtualMemory()
 }
 
 // Sets funcType to the value passed
@@ -55,6 +66,12 @@ setCurrType = (t) => {
 // Assigns the current function name to funcName
 setCurrFuncName = (name) => {
     funcName = name
+}
+
+// Assigns program id to programName
+// This variable will help differentiate if funcName refers to a local function or the global environment (= programName)
+setProgramId = (name) => {
+    programName = name
 }
 
 // Registers a function to funcTable
@@ -76,10 +93,10 @@ addFuncToFuncTable = (funcId) => {
 // Adds an id to idList (because we don't know their type yet)
 addIdToIdList = (id) => {
     idList.push(id)
-    idList.push({
+    /*idList.push({
         name: id,
         x: dimX,
-        y: dimY})
+        y: dimY})*/
 }
 
 // Adds a variable to the varTable of its respective function
@@ -89,11 +106,21 @@ addVarsToVarTable = () => {
         idList   --> Array with the names of the variables that will be added to the varTable
         currType --> Type of the variables
     */
-    
-    //console.log("FUNCNAME: ", funcName, "IDLIST: ", idList, "CURRTYPE: ", currType)
+    let scope
+    if(funcName === programName) {
+        // Current funcName === programName --> Scope of variables is GLOBAL
+        scope = "global"
+    } else {
+        // Current funcName != programName --> Scope of variables is LOCAL
+        scope = "local"
+    }
     
     // Loop through idList and add each variable
     for(let i=0; i<idList.length; i++) {
+        // Get an address for the variable in the virtual memory
+        let vAddr = virtualMemory.reserveAddress(scope, currType)
+        console.log(vAddr)
+
         // If an entry already exists, it means multiple declaration
         if(funcTable.get(funcName).varTable.has(idList[i])) {
             throw new Error(`Multiple declaration. A variable with the name ${idList[i]} already exists`)
@@ -101,7 +128,8 @@ addVarsToVarTable = () => {
             // If not, add it to the varTable
             funcTable.get(funcName).varTable.set(idList[i], {
                 type: currType,
-                value: ":)"
+                value: ":)",
+                vAddress: vAddr
             })
         }
     }
@@ -375,6 +403,9 @@ endStuff = () => {
     console.log("- - - OPERATOR STACK SIZE - - -")
     console.log(operatorStack.size())
 
-    //console.log("- - - FUNC DIR - - -")
+    console.log("- - - FUNC DIR - - -")
     //console.log(funcTable)
+    for(const [key, value] of funcTable.entries()) {
+        console.log(key, value)
+    }
 }
