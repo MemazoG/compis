@@ -119,7 +119,6 @@ addVarsToVarTable = () => {
     for(let i=0; i<idList.length; i++) {
         // Get an address for the variable in the virtual memory
         let vAddr = virtualMemory.reserveAddress(scope, currType)
-        console.log(vAddr)
 
         // If an entry already exists, it means multiple declaration
         if(funcTable.get(funcName).varTable.has(idList[i])) {
@@ -218,11 +217,14 @@ checkOperatorStack = (operators) => {
         }
 
         // Store result, its type, and generate quadruple
-        let result = temps[temp_i]
-        temp_i++
-        generateQuadruple(op, leftOpd, rightOpd, result)
+        //let result = temps[temp_i]
+        //temp_i++
+        //generateQuadruple(op, leftOpd, rightOpd, result)
 
-        operandStack.push(result)
+        // Reserve a temp address, store result and its type in address, and generate quadruple
+        let tempVirtAddr = virtualMemory.reserveAddress("temp", resultType)
+        generateQuadruple(op, leftOpd, rightOpd, tempVirtAddr)
+        operandStack.push(tempVirtAddr)
         typeStack.push(resultType)
     }
 }
