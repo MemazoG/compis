@@ -25,10 +25,6 @@ let operatorStack = new Stack()
 let typeStack = new Stack()
 let jumpStack = new Stack()
 
-// DS to deal with temps
-let temps = ["t1", "t2", "t3", "t4", "t5", "t6", "t7", "t8", "t9", "t10", "t11", "t12", "t13", "t14", "t15", "t16", "t17", "t18", "t19", "t20"]
-let temp_i = 0
-
 // Program name
 let programName = ""
 
@@ -246,7 +242,7 @@ generateReadQuadruple = (varName) => {
     // Check if variable exists in the current scope (global, function)
     if(funcTable.get(funcName).varTable.has(varName)) {
         // Found - Generate quadruple
-        generateQuadruple("read", "", "", "varName")
+        generateQuadruple("read", "", "", varName)
     } else {
         // Not Fount - Throw error
         throw new Error(`Undefined variable. The variable ${varName} was not found in current scope`)
