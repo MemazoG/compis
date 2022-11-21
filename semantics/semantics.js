@@ -122,7 +122,7 @@ addVarsToVarTable = () => {
     // Loop through idList and add each variable
     for(let i=0; i<idList.length; i++) {
         // Get an address for the variable in the virtual memory
-        let vAddr = virtualMemory.reserveAddress(scope, currType)
+        let vAddr = virtualMemory.reserveAddress(scope, currType, "regular")
 
         // If an entry already exists, it means multiple declaration
         if(funcTable.get(funcName).varTable.has(idList[i])) {
@@ -227,7 +227,7 @@ addToConstantsTable = (cte, type) => {
     // Since maps DO NOT allow duplicate keys and some constant messages may be repeated, check for duplicates first
     if(!constantsTable.has(cte)) {
         // Constant does NOT exist in map. Assign it an address and add it
-        const virtAddr = virtualMemory.reserveAddress("constant", type)
+        const virtAddr = virtualMemory.reserveAddress("constant", type, "-")
         constantsTable.set(cte, virtAddr)
         return virtAddr
     } else {
@@ -284,13 +284,18 @@ checkOperatorStack = (operators) => {
             throw new Error(`Type mismatch. The operator ${op} cannot be applied to the types ${leftOpdType} and ${rightOpdType}`)
         }
 
-        // Store result, its type, and generate quadruple
-        //let result = temps[temp_i]
-        //temp_i++
-        //generateQuadruple(op, leftOpd, rightOpd, result)
+        // Get current scope
+        let scope
+        if(funcName === programName) {
+            // Current funcName === programName --> Scope of variables is GLOBAL
+            scope = "global"
+        } else {
+            // Current funcName != programName --> Scope of variables is LOCAL
+            scope = "local"
+        }
 
         // Reserve a temp address, store result and its type in address, and generate quadruple
-        let tempVirtAddr = virtualMemory.reserveAddress("temp", resultType)
+        let tempVirtAddr = virtualMemory.reserveAddress(scope, resultType, "temp")
         generateQuadruple(op, leftOpd, rightOpd, tempVirtAddr)
         operandStack.push(tempVirtAddr)
         typeStack.push(resultType)
@@ -455,9 +460,11 @@ generateGoToMainQuadruple = () => {
     generateQuadruple("goTo", "-", "-", "?")
 }
 
-// Completes goTo main quadruple, which is the first quadruple
+// Completes goTo main quadruple, which is the first quadruple.
+// Sets funcName to programName, which helps to know we are inside main and not another function
 mainStart = () => {
     quadruples[0].res = quadruples.length
+    funcName = programName
 }
 
 
@@ -474,8 +481,12 @@ endStuff = () => {
     console.log(operatorStack.size())
 
     console.log("- - - FUNC DIR - - -")
-    //console.log(funcTable)
     for(const [key, value] of funcTable.entries()) {
+        console.log(key, value)
+    }
+
+    console.log("- - - CONSTANTS TABLE - - -")
+    for(const [key, value] of constantsTable.entries()) {
         console.log(key, value)
     }
 }

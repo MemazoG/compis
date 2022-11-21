@@ -1,16 +1,23 @@
 program testMisc;
 
 vars {
-    a, b, c : int;
+    a : int;
+    b, c, d : float;
+    e[10] : char;
+}
+
+function int hola() {
+
+}
+
+function void adios() {
+    vars {
+        x : int;
+    }
+
+    x = x * x;
 }
 
 main() {
-    a = b + c;
-    b = c * a - c;
-    if(a < b) {
-        c = a * a;
-    } else {
-        c = b;
-    }
-    b = a;
+    b = a * c;
 }
