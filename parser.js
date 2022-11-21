@@ -96,7 +96,7 @@ const grammar = {
         // << NEURALGIC POINT >> - Creates functions directory after reading PROGRAM keyword
         "program_keyword": [
              ["PROGRAM",
-              "createFuncTable(); generateGoToMainQuadruple();"]
+              "createFuncTable(); createConstantsTable(); generateGoToMainQuadruple();"]
         ],
 
         // << NEURALGIC POINT >> - Calls mainStart function, which completes goTo MAIN quadruple, just before MAIN's statements begin
@@ -230,7 +230,7 @@ const grammar = {
         // << NEURALGIC POINT >> - After reading the name of the variable, adds it to operandStack
         //                         to keep track of it
         "var_name_assignment": [
-            ["var", "addToOperandStack($1); addToTypeStack($1)"]
+            ["var", "addToTypeAndOperandStacks($1, 'var')"]
         ],
 
         // << NEURALGIC POINT >> - Add equal sign to operatorStack
@@ -246,11 +246,10 @@ const grammar = {
         // General structure for print statement
         "write": [["PRINT ( write_ops mult_write ) ;", ""]],
  
-        // << NEURALGIC POINT >> - Adds element to be printed to the operandStack
-        //                         Generates a quadruple with the form [PRINT, , , res], with res being the element to be printed
+        // << NEURALGIC POINT >> - Depending on the element to be printed, call either handleWriteExpression or handleWriteString
         "write_ops": [
-             ["var", "addToOperandStack($1); generateWriteQuadruple();"],
-             ["CTE_STRING", "addToOperandStack($1); generateWriteQuadruple();"]
+             ["expression", "handleWriteExpression()"],
+             ["CTE_STRING", "handleWriteString($1)"]
         ],
  
         // For print statement with multiple elements to be printed
@@ -461,10 +460,10 @@ const grammar = {
          // Innermost part of an expression. Can be a constant, a variable, a function call, or a new expression between parentheses
          "factor": [
              ["open_par expression close_par", ""],
-             ["CTE_INT", ""],
-             ["CTE_FLOAT", ""],
-             ["CTE_CHAR", ""],
-             ["var", "addToOperandStack($1); addToTypeStack($1);"],
+             ["CTE_INT", "addToTypeAndOperandStacks($1, 'int')"],
+             ["CTE_FLOAT", "addToTypeAndOperandStacks($1, 'float')"],
+             ["CTE_CHAR", "addToTypeAndOperandStacks($1, 'char')"],
+             ["var", "addToTypeAndOperandStacks($1, 'var')"],
              ["func_call", "console.log('Llamada a funcion')"]
          ],
 

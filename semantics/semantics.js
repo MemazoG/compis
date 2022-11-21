@@ -35,6 +35,9 @@ let programName = ""
 // Functions table
 let funcTable = null
 
+// Constants table
+let constantsTable = null
+
 // Function name to know where to add its variables
 let funcName = ""
 
@@ -56,6 +59,11 @@ let idList = []
 createFuncTable = () => {
     funcTable = new Map()
     virtualMemory = new VirtualMemory()
+}
+
+// Creates constantsTable
+createConstantsTable = () => {
+    constantsTable = new Map()
 }
 
 // Sets funcType to the value passed
@@ -141,9 +149,59 @@ clearIdList = () => {
     idList = []
 }
 
-// Adds operand to operandStack
-addToOperandStack = (opd) => {
-    operandStack.push(opd)
+// Adds the virtual address of the operand to operandStack
+// Adds the type of the operand to typeStack
+// Operand can be of 2 types: variable (var) or constants (int/float/char)
+// For variables, search them locally first and globally if needed
+// For constants, add them to constantsTable and get their virtual address
+addToTypeAndOperandStacks = (opd, type) => {
+    let cte, virtAddr, opdType
+
+    if(type === 'var') {
+        // Dealing with a variable
+        // Search for it first LOCALLY, and if it's not found there, then GLOBALLY
+        const foundInLocalScope = funcTable.get(funcName).varTable.has(opd)
+
+        if(foundInLocalScope) {
+            // Found, get its virtual address from LOCAL section
+            virtAddr = funcTable.get(funcName).varTable.get(opd).vAddress
+            opdType = funcTable.get(funcName).varTable.get(opd).type
+        } else {
+            // Not found, search GLOBAL scope
+            const foundInGlobalScope = funcTable.get(programName).varTable.has(opd)
+
+            if(foundInGlobalScope) {
+                // Found, get its virtual address from GLOBAL section
+                virtAddr = funcTable.get(programName).varTable.get(opd).vAddress
+                opdType = funcTable.get(programName).varTable.get(opd).type
+            } else {
+                // Not found --> Variable out of scope/undefined
+                throw new Error(`Undefined variable. The variable ${opd} has not been declared`)
+            }
+        }
+
+    } else {
+        // Dealing with a constant
+        if(type === "int") {
+            // Parse to int
+            cte = parseInt(opd)
+        } else if(type === "float") {
+            // Parse to float
+            cte = parseFloat(opd)
+        } else {
+            // Remove quote-marks from char
+            cte = opd.slice(1, -1)
+        }
+
+        // Get a virtual address for the constant
+        virtAddr = addToConstantsTable(cte, type)
+        opdType = type
+    }
+
+    // Push virtual address to operandStack
+    operandStack.push(virtAddr)
+    // Push type to typeStack
+    typeStack.push(opdType)
 }
 
 // Adds operator to operatorStack
@@ -160,12 +218,35 @@ addToTypeStack = (opd) => {
     typeStack.push(funcTable.get(funcName).varTable.get(opd).type)
 }
 
-// Generates a quadruple for a print statement
-generateWriteQuadruple = () => {
+// Generates print quadruple for an expression
+handleWriteExpression = () => {
+    // Retrieve expression's result from operandStack
     const res = operandStack.peek()
     operandStack.pop()
 
-    generateQuadruple("print", "", "", res)
+    generateQuadruple("print", "-", "-", res)
+}
+
+// Receives a string, assigns it a virtual address, and generates its print quadruple
+handleWriteString = (cte) => {
+    const virtAddr = addToConstantsTable(cte, "string")
+
+    // Generate print quadruple
+    generateQuadruple("print", "-", "-", virtAddr)
+}
+
+// Receives a constant and adds it to constantsTable
+addToConstantsTable = (cte, type) => {
+    // Since maps DO NOT allow duplicate keys and some constant messages may be repeated, check for duplicates first
+    if(!constantsTable.has(cte)) {
+        // Constant does NOT exist in map. Assign it an address and add it
+        const virtAddr = virtualMemory.reserveAddress("constant", type)
+        constantsTable.set(cte, virtAddr)
+        return virtAddr
+    } else {
+        // Constant ALREADY exists in map. Return its virtual address
+        return constantsTable.get(cte)
+    }
 }
 
 // Generates a quadruple for a read statement
