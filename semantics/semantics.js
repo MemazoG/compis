@@ -209,15 +209,6 @@ addToOperatorStack = (oper) => {
     operatorStack.push(oper)
 }
 
-// Adds the type of an operator to typeStack
-addToTypeStack = (opd) => {
-    // Checks if the operand exists in the variable directory. If not, variable does no exist
-    if(!funcTable.get(funcName).varTable.has(opd)) {
-        throw new Error(`Undefined variable. The variable ${opd} has not been declared`)
-    }
-    typeStack.push(funcTable.get(funcName).varTable.get(opd).type)
-}
-
 // Generates print quadruple for an expression
 handleWriteExpression = () => {
     // Retrieve expression's result from operandStack
