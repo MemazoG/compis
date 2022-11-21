@@ -242,7 +242,9 @@ generateReadQuadruple = (varName) => {
     // Check if variable exists in the current scope (global, function)
     if(funcTable.get(funcName).varTable.has(varName)) {
         // Found - Generate quadruple
-        generateQuadruple("read", "", "", varName)
+        const res = operandStack.peek()
+        operandStack.pop()
+        generateQuadruple("read", "", "", res)
     } else {
         // Not Fount - Throw error
         throw new Error(`Undefined variable. The variable ${varName} was not found in current scope`)

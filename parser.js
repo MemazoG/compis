@@ -230,18 +230,20 @@ const grammar = {
         // << NEURALGIC POINT >> - After reading the name of the variable, adds it to operandStack
         //                         to keep track of it
         "var_name_assignment": [
-            ["var", "addToTypeAndOperandStacks($1, 'var')"]
+            ["var_name", ""]
         ],
 
         // << NEURALGIC POINT >> - Add equal sign to operatorStack
         "eq_operator": [
              ["=", "addToOperatorStack($1)"]
         ],
+
+        "var_name": [["var", "addToTypeAndOperandStacks($1, 'var')"]],
  
         // General structure for read statement
         "read": [["READ ( read_var ) ;", ""]],
 
-        "read_var": [["var", "generateReadQuadruple($1)"]],
+        "read_var": [["var_name", "generateReadQuadruple($1)"]],
  
         // General structure for print statement
         "write": [["PRINT ( write_ops mult_write ) ;", ""]],
@@ -463,7 +465,7 @@ const grammar = {
              ["CTE_INT", "addToTypeAndOperandStacks($1, 'int')"],
              ["CTE_FLOAT", "addToTypeAndOperandStacks($1, 'float')"],
              ["CTE_CHAR", "addToTypeAndOperandStacks($1, 'char')"],
-             ["var", "addToTypeAndOperandStacks($1, 'var')"],
+             ["var_name", ""],
              ["func_call", "console.log('Llamada a funcion')"]
          ],
 
