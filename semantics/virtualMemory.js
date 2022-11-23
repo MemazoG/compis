@@ -164,8 +164,22 @@ class VirtualMemory {
         }
     }
 
-    greet() {
-        console.log("Hello")
+    // Clears local addresses of every type
+    clearLocalAddresses() {
+        for(let type in this.virtualAddresses.local) {
+            for(let addrType in this.virtualAddresses.local[type]) {
+                // Set curr address to start address
+                this.virtualAddresses.local[type][addrType].curr = this.virtualAddresses.local[type][addrType].start
+            }
+        }
+    }
+
+    // Counts the local temporal variables of a given type (int/float/char)
+    countTemps(t) {
+        const currAddress = this.virtualAddresses.local[t].temp.curr
+        const startAddress = this.virtualAddresses.local[t].temp.start
+
+        return (currAddress - startAddress)
     }
 }
 

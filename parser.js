@@ -129,7 +129,7 @@ const grammar = {
         //                         of their respective function. Function name in this point is stored in funcName var
         "semicolon_vars": [
              [";",
-              "addVarsToVarTable(); clearIdList();"]
+              "addVarsToVarTable()"]
         ],
 
         "vars_keyword": [
@@ -174,7 +174,17 @@ const grammar = {
              ["", ""]
         ],
  
-        "func": [["FUNCTION func_type func_id ( params ) { vars_sec statements }", ""]],
+        "func": [["FUNCTION func_type func_id ( params close_par_func { vars_sec vars_end statements close_cb_func", ""]],
+
+        // << NEURALGIC POINT >> - At this point all params have been read and their types are in paramList
+        //                         Attach list to the function
+        "close_par_func": [[")", "attachParamList()"]],
+
+        // << NEURALGIC POINT >> - Call function that counts number of local variables declared. Save function start-point
+        "vars_end": [["", "countLocalVars(); funcQuadruplesStart();"]],
+
+        // << NEURALGIC POINT >> - Call function that deals with everything regarding a function's ending
+        "close_cb_func": [["}", "funcEnd()"]],
 
         "func_id": [
              ["ID",
@@ -187,9 +197,13 @@ const grammar = {
         ],
  
         "params": [
-             ["type ID mult_params", ""],
+             ["type var_id_keyword add_param mult_params", ""],
              ["", ""]
          ],
+
+         // << NEURALGIC POINT >> - Insert param into function's varTable and also add it to the paramList
+         //                         Empty word rule, only place I could put it without disrupting other rules
+         "add_param": [["", "registerParam()"]],
  
         "mult_params": [
              [", params", ""],
@@ -310,9 +324,24 @@ const grammar = {
              ["CTE_INT", ""]
         ],
  
-        "void_func_call": [["ID ( args ) ;", ""]],
+        "void_func_call": [["func_name_id open_par_func_call args close_par_func_call ;", ""]],
+
+        // << NEURALGIC POINT >> - Verify function name exists in funcTable
+        "func_name_id": [["ID", "verifyFuncExists($1)"]],
+
+        // << NEURALGIC POINT >> - Generate ERA quadruple and prepare for parameter matching
+        "open_par_func_call": [["(", "generateEra()"]],
+
+        // << NEURALGIC POINT >> - Check if all parameters were matched, none missing
+        "close_par_func_call": [[")", "paramsEnd()"]],
  
-        "args": [["expression mult_arg", ""]],
+        "args": [
+             ["expression match_param mult_arg", ""],
+             ["", ""]
+          ],
+
+          // << NEURALGIC POINT >> - Match current param (expression result) to the corresponding one in the paramList of the function
+          "match_param": [["", "matchParam()"]],
  
         "mult_arg": [
              [", args", ""],
@@ -466,7 +495,7 @@ const grammar = {
              ["CTE_FLOAT", "addToTypeAndOperandStacks($1, 'float')"],
              ["CTE_CHAR", "addToTypeAndOperandStacks($1, 'char')"],
              ["var_name", ""],
-             ["func_call", "console.log('Llamada a funcion')"]
+             ["func_call", ""]
          ],
 
          // << NEURALGIC POINT >> - Adds a special symbol into operatorStack to simulate a "fake bottom". Helps when dealing with parentheses
@@ -479,7 +508,7 @@ const grammar = {
              [")", "removeFakeBottom()"]
          ],
  
-         "func_call": [["ID ( args ) ;", ""]],
+         "func_call": [["func_name_id open_par_func_call args ) ;", ""]],
  
          "sp_func": [
              ["MEAN ( var ) ;", ""],
