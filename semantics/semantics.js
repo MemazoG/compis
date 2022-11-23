@@ -1,13 +1,20 @@
 // semantics.js
 // Language's semantic rules
 
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+//                                      Imports
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 let Queue = require("queue-fifo")
 let Stack = require("stack-lifo")
 const semanticCube = require("./semanticCube")
+const VirtualMemory = require("./virtualMemory")
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 //                               Variable Declarations
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+// Virtual memory
+let virtualMemory = null
 
 // Quadruples
 let quadruples = []
@@ -18,18 +25,23 @@ let operatorStack = new Stack()
 let typeStack = new Stack()
 let jumpStack = new Stack()
 
-// DS to deal with temps
-let temps = ["t1", "t2", "t3", "t4", "t5", "t6", "t7", "t8", "t9", "t10", "t11", "t12", "t13", "t14", "t15", "t16", "t17", "t18", "t19", "t20"]
-let temp_i = 0
+// Program name
+let programName = ""
 
 // Functions table
 let funcTable = null
+
+// Constants table
+let constantsTable = null
 
 // Function name to know where to add its variables
 let funcName = ""
 
 // Type for ids and funcs
 let currType = ""
+
+// Stores the name of the function called. It's a stack because of functions being called within functions
+let funcCalled = new Stack()
 
 // For handling dimensions of variables
 let dimX = 1
@@ -38,13 +50,28 @@ let dimY = 1
 // Id list (for variable declarations)
 let idList = []
 
+// Parameter list (for parameter list of functions)
+let paramList = []
+
+// Parameter name list (used to distinguish parameters from other local vars in the varTable)
+let paramNameList = []
+
+// Iterates over params during the matching in function call
+let currParam = 0
+
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 //                                      Functions
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-// Creates funcTable
+// Creates funcTable and initializes the virtual memory
 createFuncTable = () => {
     funcTable = new Map()
+    virtualMemory = new VirtualMemory()
+}
+
+// Creates constantsTable
+createConstantsTable = () => {
+    constantsTable = new Map()
 }
 
 // Sets funcType to the value passed
@@ -57,6 +84,12 @@ setCurrFuncName = (name) => {
     funcName = name
 }
 
+// Assigns program id to programName
+// This variable will help differentiate if funcName refers to a local function or the global environment (= programName)
+setProgramId = (name) => {
+    programName = name
+}
+
 // Registers a function to funcTable
 addFuncToFuncTable = (funcId) => {
     // Checks if function already exists
@@ -66,20 +99,30 @@ addFuncToFuncTable = (funcId) => {
     else {
         // Adds a new function with its name (key), type, and respective varTable
         funcTable.set(funcId, {
-            name: funcId,
             type: currType,
             varTable: new Map()
         })
+
+        // PARCHE GUADALUPANO - If functions returns something (NOT void), create a global variable with its name (helps with the return)
+        if(currType === "int" || currType === "float" || currType === "char") {
+            // Assign an address
+            const funcVarAddr = virtualMemory.reserveAddress("global", currType, "regular")
+            // Create entry in current func's varTable
+            funcTable.get(programName).varTable.set(funcId, {
+                type: currType,
+                vAddr: funcVarAddr
+            })
+        }
     }
 }
 
 // Adds an id to idList (because we don't know their type yet)
 addIdToIdList = (id) => {
     idList.push(id)
-    idList.push({
+    /*idList.push({
         name: id,
         x: dimX,
-        y: dimY})
+        y: dimY})*/
 }
 
 // Adds a variable to the varTable of its respective function
@@ -89,11 +132,20 @@ addVarsToVarTable = () => {
         idList   --> Array with the names of the variables that will be added to the varTable
         currType --> Type of the variables
     */
-    
-    //console.log("FUNCNAME: ", funcName, "IDLIST: ", idList, "CURRTYPE: ", currType)
+    let scope
+    if(funcName === programName) {
+        // Current funcName === programName --> Scope of variables is GLOBAL
+        scope = "global"
+    } else {
+        // Current funcName != programName --> Scope of variables is LOCAL
+        scope = "local"
+    }
     
     // Loop through idList and add each variable
     for(let i=0; i<idList.length; i++) {
+        // Get an address for the variable in the virtual memory
+        let vAddr = virtualMemory.reserveAddress(scope, currType, "regular")
+
         // If an entry already exists, it means multiple declaration
         if(funcTable.get(funcName).varTable.has(idList[i])) {
             throw new Error(`Multiple declaration. A variable with the name ${idList[i]} already exists`)
@@ -101,12 +153,13 @@ addVarsToVarTable = () => {
             // If not, add it to the varTable
             funcTable.get(funcName).varTable.set(idList[i], {
                 type: currType,
-                value: ":)"
+                vAddress: vAddr
             })
         }
     }
     //console.log(funcTable.get(funcName))
     //console.log("")
+    clearIdList()
 }
 
 // Clears the array idList because its contents have already been used
@@ -114,9 +167,190 @@ clearIdList = () => {
     idList = []
 }
 
-// Adds operand to operandStack
-addToOperandStack = (opd) => {
-    operandStack.push(opd)
+// Inserts a parameter into the function's varTable and adds it to the paramList
+registerParam = () => {
+    // Add name to paramNameList, so I can differentiate parameters from other local variables in the function's varTable
+    // PARCHE GUADALUPANO
+    paramNameList.push(idList[0])
+
+    // Call function that will add it to varTable of the function
+    addVarsToVarTable()
+
+    // Add the type of the current parameter into paramList
+    // Entire list will be added when the closing parenthesis of the function is read
+    paramList.push(currType)
+}
+
+// Attach paramList to the current function (function signature). Clear paramList var when done for any other functions to come
+attachParamList = () => {
+    funcTable.get(funcName).paramTypeList = paramList
+
+    // Clear paramList
+    paramList = []
+}
+
+// Counts local vars by their type, by taking the varTable and counting the types that are NOT parameters
+countLocalVars = () => {
+    let localVars = {
+        int: 0,
+        float: 0,
+        char: 0
+    }
+
+    // Iterate over varTable and count variables that are NOT parameters by their type
+    for(let [key, value] of funcTable.get(funcName).varTable) {
+        if(!paramNameList.includes(key)) {
+            // Contabilize its type
+            if(value.type === "int") {
+                localVars.int++
+            } else if(value.type === "float") {
+                localVars.float++
+            } else {
+                localVars.char++
+            }
+        }
+    }
+
+    // Clear paramNameList of its contents so it can work with functions that follow
+    paramNameList = []
+
+    // Insert into funcTable the number of localVars
+    funcTable.get(funcName).localVars = localVars
+}
+
+// Save into funcTable the current quadruple, marks function start quadruple
+funcQuadruplesStart = () => {
+    funcTable.get(funcName).start = quadruples.length
+}
+
+// Function ends. Delete its varTable, generate ENDFUNC action, insert the number of temps used into funcTable. If not a void-function, check if something has been returned
+funcEnd = () => {
+    // If function is non-void, check if something has been returned
+
+    // Delete varTable
+    funcTable.get(funcName).varTable = null
+
+    // Generate ENDFUNC action
+    generateQuadruple("endfunc", "-", "-", "-")
+
+    // Count temps and add the number to funcTable
+    let tempVars = {
+        int: virtualMemory.countTemps("int"),
+        float: virtualMemory.countTemps("float"),
+        char: virtualMemory.countTemps("char")
+    }
+    funcTable.get(funcName).tempVars = tempVars
+
+    // Function is over, can clear the virtual memory of its variables
+    virtualMemory.clearLocalAddresses()
+}
+
+// Function that receives a name and checks if it is registered in funcTable
+verifyFuncExists = (name) => {
+    if(funcTable.has(name)) {
+        // Function exists. Store its name in funcCalled to remember its name when generating ERA quadruple
+        funcCalled.push(name)
+    } else {
+        // Function does not exist --> ERROR
+        throw new Error(`Function does not exist.`)
+    }
+}
+
+// Generate ERA quadruple and prepare for parameter matching
+generateEra = () => {
+    generateQuadruple("era", funcCalled.peek(), "-", "-")
+
+    // Prepare for parameter matching
+    currParam = 0
+}
+
+// Matches the current argument (top of operandStack) with the current param (number given by currParam)
+matchParam = () => {
+    if(currParam >= funcTable.get(funcCalled.peek()).paramTypeList.length) {
+        // Arguments given > expected, throw error
+        throw new Error(`Function does not expect this number of arguments.`)
+    }
+
+    const currArg = operandStack.peek()
+    operandStack.pop()
+
+    const argType = typeStack.peek()
+    typeStack.pop()
+
+    if(argType === funcTable.get(funcCalled.peek()).paramTypeList[currParam]) {
+        // Type matches
+        const resParam = "param" + currParam
+        generateQuadruple("param", currArg, "-", resParam)
+    } else {
+        // Does not match
+        console.log("ARGUMENT TYPE:", argType)
+        console.log("EXPECTED:", funcTable.get(funcCalled.peek()).paramTypeList[currParam])
+        throw new Error(`Argument does not match parameter.`)
+    }
+
+    currParam++
+}
+
+// Verify that there are no missing parameters (call has less than expected)
+paramsEnd = () => {
+    if(currParam < funcTable.get(funcCalled.peek()).paramTypeList.length) {
+        throw new Error(`Function expected more parameters.`)
+    }
+}
+
+// Adds the virtual address of the operand to operandStack
+// Adds the type of the operand to typeStack
+// Operand can be of 2 types: variable (var) or constants (int/float/char)
+// For variables, search them locally first and globally if needed
+// For constants, add them to constantsTable and get their virtual address
+addToTypeAndOperandStacks = (opd, type) => {
+    let cte, virtAddr, opdType
+
+    if(type === 'var') {
+        // Dealing with a variable
+        // Search for it first LOCALLY, and if it's not found there, then GLOBALLY
+        const foundInLocalScope = funcTable.get(funcName).varTable.has(opd)
+
+        if(foundInLocalScope) {
+            // Found, get its virtual address from LOCAL section
+            virtAddr = funcTable.get(funcName).varTable.get(opd).vAddress
+            opdType = funcTable.get(funcName).varTable.get(opd).type
+        } else {
+            // Not found, search GLOBAL scope
+            const foundInGlobalScope = funcTable.get(programName).varTable.has(opd)
+
+            if(foundInGlobalScope) {
+                // Found, get its virtual address from GLOBAL section
+                virtAddr = funcTable.get(programName).varTable.get(opd).vAddress
+                opdType = funcTable.get(programName).varTable.get(opd).type
+            } else {
+                // Not found --> Variable out of scope/undefined
+                throw new Error(`Undefined variable. The variable ${opd} has not been declared`)
+            }
+        }
+
+    } else {
+        // Dealing with a constant
+        if(type === "int") {
+            // Parse to int
+            cte = parseInt(opd)
+        } else if(type === "float") {
+            // Parse to float
+            cte = parseFloat(opd)
+        } else {
+            // Remove quote-marks from char
+            cte = opd.slice(1, -1)
+        }
+
+        // Get a virtual address for the constant
+        virtAddr = addToConstantsTable(cte, type)
+        opdType = type
+    }
+
+    // Push virtual address to operandStack
+    operandStack.push(virtAddr)
+    // Push type to typeStack
+    typeStack.push(opdType)
 }
 
 // Adds operator to operatorStack
@@ -124,21 +358,35 @@ addToOperatorStack = (oper) => {
     operatorStack.push(oper)
 }
 
-// Adds the type of an operator to typeStack
-addToTypeStack = (opd) => {
-    // Checks if the operand exists in the variable directory. If not, variable does no exist
-    if(!funcTable.get(funcName).varTable.has(opd)) {
-        throw new Error(`Undefined variable. The variable ${opd} has not been declared`)
-    }
-    typeStack.push(funcTable.get(funcName).varTable.get(opd).type)
-}
-
-// Generates a quadruple for a print statement
-generateWriteQuadruple = () => {
+// Generates print quadruple for an expression
+handleWriteExpression = () => {
+    // Retrieve expression's result from operandStack
     const res = operandStack.peek()
     operandStack.pop()
 
-    generateQuadruple("print", "", "", res)
+    generateQuadruple("print", "-", "-", res)
+}
+
+// Receives a string, assigns it a virtual address, and generates its print quadruple
+handleWriteString = (cte) => {
+    const virtAddr = addToConstantsTable(cte, "string")
+
+    // Generate print quadruple
+    generateQuadruple("print", "-", "-", virtAddr)
+}
+
+// Receives a constant and adds it to constantsTable
+addToConstantsTable = (cte, type) => {
+    // Since maps DO NOT allow duplicate keys and some constant messages may be repeated, check for duplicates first
+    if(!constantsTable.has(cte)) {
+        // Constant does NOT exist in map. Assign it an address and add it
+        const virtAddr = virtualMemory.reserveAddress("constant", type, "-")
+        constantsTable.set(cte, virtAddr)
+        return virtAddr
+    } else {
+        // Constant ALREADY exists in map. Return its virtual address
+        return constantsTable.get(cte)
+    }
 }
 
 // Generates a quadruple for a read statement
@@ -147,7 +395,9 @@ generateReadQuadruple = (varName) => {
     // Check if variable exists in the current scope (global, function)
     if(funcTable.get(funcName).varTable.has(varName)) {
         // Found - Generate quadruple
-        generateQuadruple("read", "", "", "varName")
+        const res = operandStack.peek()
+        operandStack.pop()
+        generateQuadruple("read", "", "", res)
     } else {
         // Not Fount - Throw error
         throw new Error(`Undefined variable. The variable ${varName} was not found in current scope`)
@@ -189,12 +439,20 @@ checkOperatorStack = (operators) => {
             throw new Error(`Type mismatch. The operator ${op} cannot be applied to the types ${leftOpdType} and ${rightOpdType}`)
         }
 
-        // Store result, its type, and generate quadruple
-        let result = temps[temp_i]
-        temp_i++
-        generateQuadruple(op, leftOpd, rightOpd, result)
+        // Get current scope
+        let scope
+        if(funcName === programName) {
+            // Current funcName === programName --> Scope of variables is GLOBAL
+            scope = "global"
+        } else {
+            // Current funcName != programName --> Scope of variables is LOCAL
+            scope = "local"
+        }
 
-        operandStack.push(result)
+        // Reserve a temp address, store result and its type in address, and generate quadruple
+        let tempVirtAddr = virtualMemory.reserveAddress(scope, resultType, "temp")
+        generateQuadruple(op, leftOpd, rightOpd, tempVirtAddr)
+        operandStack.push(tempVirtAddr)
         typeStack.push(resultType)
     }
 }
@@ -351,6 +609,19 @@ doWhileEnd = () => {
     generateQuadruple("goToV", cond, "-", ret)
 }
 
+// Generates a goTo quadruple that will be filled out when MAIN begins
+// I do not register anthing to jumpStack because I know this will ALWAYS be the first quadruple
+generateGoToMainQuadruple = () => {
+    generateQuadruple("goTo", "-", "-", "?")
+}
+
+// Completes goTo main quadruple, which is the first quadruple.
+// Sets funcName to programName, which helps to know we are inside main and not another function
+mainStart = () => {
+    quadruples[0].res = quadruples.length
+    funcName = programName
+}
+
 
 
 
@@ -358,12 +629,19 @@ endStuff = () => {
     console.log("- - - QUADRUPLES - - -")
     console.log(quadruples)
 
-    console.log("- - - OPERAND STACK SIZE - - -")
-    console.log(operandStack.size())
+    //console.log("- - - OPERAND STACK SIZE - - -")
+    //console.log(operandStack.size())
 
-    console.log("- - - OPERATOR STACK SIZE - - -")
-    console.log(operatorStack.size())
+    //console.log("- - - OPERATOR STACK SIZE - - -")
+    //console.log(operatorStack.size())
 
-    //console.log("- - - FUNC DIR - - -")
-    //console.log(funcTable)
+    console.log("- - - FUNC DIR - - -")
+    for(const [key, value] of funcTable.entries()) {
+        console.log(key, value)
+    }
+
+    //console.log("- - - CONSTANTS TABLE - - -")
+    //for(const [key, value] of constantsTable.entries()) {
+    //    console.log(key, value)
+    //}
 }

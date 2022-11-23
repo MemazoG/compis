@@ -91,18 +91,21 @@ const grammar = {
         "start": [["program",   "endStuff();"]],
  
         // General program structure
-        "program": [["program_keyword program_id ; vars_sec funcs_sec MAIN ( ) { statements } EOF", ""]],
+        "program": [["program_keyword program_id ; vars_sec funcs_sec MAIN ( ) open_cb_main statements } EOF", ""]],
 
         // << NEURALGIC POINT >> - Creates functions directory after reading PROGRAM keyword
         "program_keyword": [
              ["PROGRAM",
-              "createFuncTable();"]
+              "createFuncTable(); createConstantsTable(); generateGoToMainQuadruple();"]
         ],
+
+        // << NEURALGIC POINT >> - Calls mainStart function, which completes goTo MAIN quadruple, just before MAIN's statements begin
+        "open_cb_main": [["{", "mainStart()"]],
 
         // << NEURALGIC POINT >> - After reading the program's name, adds it to the functions directory
         "program_id": [
              ["ID",
-              "setCurrType('-'); setCurrFuncName($1); addFuncToFuncTable($1);"]
+              "setCurrType('-'); setCurrFuncName($1); addFuncToFuncTable($1); setProgramId($1);"]
          ],
 
         // << NEURALGIC POINT >> - After reading a type, assigns it to the currType variable
@@ -126,7 +129,7 @@ const grammar = {
         //                         of their respective function. Function name in this point is stored in funcName var
         "semicolon_vars": [
              [";",
-              "addVarsToVarTable(); clearIdList();"]
+              "addVarsToVarTable()"]
         ],
 
         "vars_keyword": [
@@ -171,7 +174,17 @@ const grammar = {
              ["", ""]
         ],
  
-        "func": [["FUNCTION func_type func_id ( params ) { vars_sec statements }", ""]],
+        "func": [["FUNCTION func_type func_id ( params close_par_func { vars_sec vars_end statements close_cb_func", ""]],
+
+        // << NEURALGIC POINT >> - At this point all params have been read and their types are in paramList
+        //                         Attach list to the function
+        "close_par_func": [[")", "attachParamList()"]],
+
+        // << NEURALGIC POINT >> - Call function that counts number of local variables declared. Save function start-point
+        "vars_end": [["", "countLocalVars(); funcQuadruplesStart();"]],
+
+        // << NEURALGIC POINT >> - Call function that deals with everything regarding a function's ending
+        "close_cb_func": [["}", "funcEnd()"]],
 
         "func_id": [
              ["ID",
@@ -184,9 +197,13 @@ const grammar = {
         ],
  
         "params": [
-             ["type ID mult_params", ""],
+             ["type var_id_keyword add_param mult_params", ""],
              ["", ""]
          ],
+
+         // << NEURALGIC POINT >> - Insert param into function's varTable and also add it to the paramList
+         //                         Empty word rule, only place I could put it without disrupting other rules
+         "add_param": [["", "registerParam()"]],
  
         "mult_params": [
              [", params", ""],
@@ -227,27 +244,28 @@ const grammar = {
         // << NEURALGIC POINT >> - After reading the name of the variable, adds it to operandStack
         //                         to keep track of it
         "var_name_assignment": [
-            ["var", "addToOperandStack($1); addToTypeStack($1)"]
+            ["var_name", ""]
         ],
 
         // << NEURALGIC POINT >> - Add equal sign to operatorStack
         "eq_operator": [
              ["=", "addToOperatorStack($1)"]
         ],
+
+        "var_name": [["var", "addToTypeAndOperandStacks($1, 'var')"]],
  
         // General structure for read statement
         "read": [["READ ( read_var ) ;", ""]],
 
-        "read_var": [["var", "generateReadQuadruple($1)"]],
+        "read_var": [["var_name", "generateReadQuadruple($1)"]],
  
         // General structure for print statement
         "write": [["PRINT ( write_ops mult_write ) ;", ""]],
  
-        // << NEURALGIC POINT >> - Adds element to be printed to the operandStack
-        //                         Generates a quadruple with the form [PRINT, , , res], with res being the element to be printed
+        // << NEURALGIC POINT >> - Depending on the element to be printed, call either handleWriteExpression or handleWriteString
         "write_ops": [
-             ["var", "addToOperandStack($1); generateWriteQuadruple();"],
-             ["CTE_STRING", "addToOperandStack($1); generateWriteQuadruple();"]
+             ["expression", "handleWriteExpression()"],
+             ["CTE_STRING", "handleWriteString($1)"]
         ],
  
         // For print statement with multiple elements to be printed
@@ -306,9 +324,24 @@ const grammar = {
              ["CTE_INT", ""]
         ],
  
-        "void_func_call": [["ID ( args ) ;", ""]],
+        "void_func_call": [["func_name_id open_par_func_call args close_par_func_call ;", ""]],
+
+        // << NEURALGIC POINT >> - Verify function name exists in funcTable
+        "func_name_id": [["ID", "verifyFuncExists($1)"]],
+
+        // << NEURALGIC POINT >> - Generate ERA quadruple and prepare for parameter matching
+        "open_par_func_call": [["(", "generateEra()"]],
+
+        // << NEURALGIC POINT >> - Check if all parameters were matched, none missing
+        "close_par_func_call": [[")", "paramsEnd()"]],
  
-        "args": [["expression mult_arg", ""]],
+        "args": [
+             ["expression match_param mult_arg", ""],
+             ["", ""]
+          ],
+
+          // << NEURALGIC POINT >> - Match current param (expression result) to the corresponding one in the paramList of the function
+          "match_param": [["", "matchParam()"]],
  
         "mult_arg": [
              [", args", ""],
@@ -458,11 +491,11 @@ const grammar = {
          // Innermost part of an expression. Can be a constant, a variable, a function call, or a new expression between parentheses
          "factor": [
              ["open_par expression close_par", ""],
-             ["CTE_INT", ""],
-             ["CTE_FLOAT", ""],
-             ["CTE_CHAR", ""],
-             ["var", "addToOperandStack($1); addToTypeStack($1);"],
-             ["func_call", "console.log('Llamada a funcion')"]
+             ["CTE_INT", "addToTypeAndOperandStacks($1, 'int')"],
+             ["CTE_FLOAT", "addToTypeAndOperandStacks($1, 'float')"],
+             ["CTE_CHAR", "addToTypeAndOperandStacks($1, 'char')"],
+             ["var_name", ""],
+             ["func_call", ""]
          ],
 
          // << NEURALGIC POINT >> - Adds a special symbol into operatorStack to simulate a "fake bottom". Helps when dealing with parentheses
@@ -475,7 +508,7 @@ const grammar = {
              [")", "removeFakeBottom()"]
          ],
  
-         "func_call": [["ID ( args ) ;", ""]],
+         "func_call": [["func_name_id open_par_func_call args ) ;", ""]],
  
          "sp_func": [
              ["MEAN ( var ) ;", ""],

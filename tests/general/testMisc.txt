@@ -1,0 +1,35 @@
+program testMisc;
+
+vars {
+    a : int;
+    b, c, d : float;
+    e[10] : char;
+}
+
+function int hola(int aa, float bb, int cc) {
+    vars {
+        x, y, z : int;
+    }
+
+    x = y * z * 2;
+    y = 10;
+    if(x > y) {
+        x = y;
+    }
+
+    return(x);
+}
+
+function void adios(int abc, float k) {
+    vars {
+        x : int;
+    }
+
+    x = x * x / 2;
+}
+
+main() {
+    b = a * c;
+
+    adios(a+5*6, b);
+}
