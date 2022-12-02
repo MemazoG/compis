@@ -7,6 +7,7 @@
 let Queue = require("queue-fifo")
 let Stack = require("stack-lifo")
 const semanticCube = require("./semanticCube")
+const getOpCode = require("./operationCodes")
 const VirtualMemory = require("./virtualMemory")
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -15,6 +16,11 @@ const VirtualMemory = require("./virtualMemory")
 
 // Virtual memory
 let virtualMemory = null
+
+// Relevant DS for virtual machine
+// Declared as a GLOBAL OBJECT, so it can be used in ANY of the files without explicitly exporting it
+// Used in parse.js to pass it to the virtual machine
+relevantDSVM = null
 
 // Quadruples
 let quadruples = []
@@ -59,6 +65,9 @@ let paramNameList = []
 // Iterates over params during the matching in function call
 let currParam = 0
 
+// Helps with counting number of variables of each type inside a function
+let funcSizes = null
+
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 //                                      Functions
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -100,7 +109,8 @@ addFuncToFuncTable = (funcId) => {
         // Adds a new function with its name (key), type, and respective varTable
         funcTable.set(funcId, {
             type: currType,
-            varTable: new Map()
+            varTable: new Map(),
+            funcSizeCount: new Map(),
         })
 
         // PARCHE GUADALUPANO - If functions returns something (NOT void), create a global variable with its name (helps with the return)
@@ -231,7 +241,7 @@ funcEnd = () => {
     funcTable.get(funcName).varTable = null
 
     // Generate ENDFUNC action
-    generateQuadruple("endfunc", "-", "-", "-")
+    generateQuadruple(getOpCode("endfunc"), "-", "-", "-")
 
     // Count temps and add the number to funcTable
     let tempVars = {
@@ -258,7 +268,7 @@ verifyFuncExists = (name) => {
 
 // Generate ERA quadruple and prepare for parameter matching
 generateEra = () => {
-    generateQuadruple("era", funcCalled.peek(), "-", "-")
+    generateQuadruple(getOpCode("era"), funcCalled.peek(), "-", "-")
 
     // Prepare for parameter matching
     currParam = 0
@@ -280,7 +290,7 @@ matchParam = () => {
     if(argType === funcTable.get(funcCalled.peek()).paramTypeList[currParam]) {
         // Type matches
         const resParam = "param" + currParam
-        generateQuadruple("param", currArg, "-", resParam)
+        generateQuadruple(getOpCode("param"), currArg, "-", resParam)
     } else {
         // Does not match
         console.log("ARGUMENT TYPE:", argType)
@@ -364,7 +374,7 @@ handleWriteExpression = () => {
     const res = operandStack.peek()
     operandStack.pop()
 
-    generateQuadruple("print", "-", "-", res)
+    generateQuadruple(getOpCode("print"), "-", "-", res)
 }
 
 // Receives a string, assigns it a virtual address, and generates its print quadruple
@@ -372,7 +382,7 @@ handleWriteString = (cte) => {
     const virtAddr = addToConstantsTable(cte, "string")
 
     // Generate print quadruple
-    generateQuadruple("print", "-", "-", virtAddr)
+    generateQuadruple(getOpCode("print"), "-", "-", virtAddr)
 }
 
 // Receives a constant and adds it to constantsTable
@@ -397,7 +407,7 @@ generateReadQuadruple = (varName) => {
         // Found - Generate quadruple
         const res = operandStack.peek()
         operandStack.pop()
-        generateQuadruple("read", "", "", res)
+        generateQuadruple(getOpCode("read"), "", "", res)
     } else {
         // Not Fount - Throw error
         throw new Error(`Undefined variable. The variable ${varName} was not found in current scope`)
@@ -451,9 +461,12 @@ checkOperatorStack = (operators) => {
 
         // Reserve a temp address, store result and its type in address, and generate quadruple
         let tempVirtAddr = virtualMemory.reserveAddress(scope, resultType, "temp")
-        generateQuadruple(op, leftOpd, rightOpd, tempVirtAddr)
+        generateQuadruple(getOpCode(op), leftOpd, rightOpd, tempVirtAddr)
         operandStack.push(tempVirtAddr)
         typeStack.push(resultType)
+
+        // Register temp type to funcSizes
+        funcSizes.get("tempsSizes")[resultType]++
     }
 }
 
@@ -492,7 +505,7 @@ assignToVar = () => {
         throw new Error(`Type mismatch. An expression of type ${exprResType} cannot be assigned to a variable of type ${varNameType}`)
     }
 
-    generateQuadruple(op, exprRes, "-", varName)
+    generateQuadruple(getOpCode(op), exprRes, "-", varName)
 }
 
 // Gets condition result from the if-statement and generates its quadruple
@@ -509,7 +522,7 @@ ifStart = () => {
     }
 
     // Generate quadruple (GotoF)
-    generateQuadruple("gotoF", cond, "-", "?")
+    generateQuadruple(getOpCode("goToF"), cond, "-", "?")
 
     // Register goToF quadruple into jumpStack
     jumpStack.push(quadruples.length - 1)
@@ -528,7 +541,7 @@ ifEnd = () => {
 // Generates gotTo quadruple and completes goToF quadruple of ifStart
 elseStmt = () => {
     // Generate goTo quadruple
-    generateQuadruple("goTo", "-", "-", "?")
+    generateQuadruple(getOpCode("goTo"), "-", "-", "?")
 
     // Get quadruple index from jumpStack
     const gotofQuad = jumpStack.peek()
@@ -560,7 +573,7 @@ whileStart = () => {
     }
 
     // Generate quadruple (GotoF)
-    generateQuadruple("gotoF", cond, "-", "?")
+    generateQuadruple(getOpCode("goToF"), cond, "-", "?")
 
     // Register goToF quadruple into jumpStack
     jumpStack.push(quadruples.length - 1)
@@ -577,7 +590,7 @@ whileEnd = () => {
     jumpStack.pop()
 
     // Generate goTo quadruple
-    generateQuadruple("goTo", "-", "-", returnToCond)
+    generateQuadruple(getOpCode("goTo"), "-", "-", returnToCond)
 
     // Complete goToF quadruple
     quadruples[gotofQuad].res = quadruples.length
@@ -606,28 +619,86 @@ doWhileEnd = () => {
     }
 
     // Generate goToV quadruple
-    generateQuadruple("goToV", cond, "-", ret)
+    generateQuadruple(getOpCode("goToV"), cond, "-", ret)
 }
 
 // Generates a goTo quadruple that will be filled out when MAIN begins
 // I do not register anthing to jumpStack because I know this will ALWAYS be the first quadruple
 generateGoToMainQuadruple = () => {
-    generateQuadruple("goTo", "-", "-", "?")
+    generateQuadruple(getOpCode("goTo"), "-", "-", "?")
 }
 
 // Completes goTo main quadruple, which is the first quadruple.
+// Also adds to funcSizes the count of global variables
 // Sets funcName to programName, which helps to know we are inside main and not another function
 mainStart = () => {
     quadruples[0].res = quadruples.length
     funcName = programName
+
+    let vars = {int: 0, float: 0, char: 0}
+
+    // Iterate through varTable of function and count each variable. Turn it into an array for simpler iteration
+    const varTableArr = Array.from(funcTable.get(programName).varTable)
+    for(let v of varTableArr) {
+        if(v[1].type === "int"){
+            vars.int++
+        } else if(v[1].type == "float") {
+            vars.float++
+        } else {
+            vars.char++
+        }
+    }
+
+    // funcSizes will hold the number of variables of the function
+    funcSizes = new Map()
+    // At this point, the number of global vars can be added
+    funcSizes.set("varsSizes", vars)
+    // Create an entry for the temps, even though none have been counted (so initialize with 0s)
+    funcSizes.set("tempsSizes", {int: 0, float: 0, char: 0})
+}
+
+// Attaches funcSizes to the main function's entry in the funcTable. This contains the number of all variables used in it
+mainEnd = () => {
+    //console.log(funcSizes)
+    funcTable.get(programName).funcSizeCount = funcSizes
+
+    // Clears contents of funcSizes
+    funcSizes = null
+}
+
+// Erases the contents of funcTable, as program has ended and there is no need for it anymore
+// Before deleting it, stores all the relevant data structures for the virtual machine to use
+deleteFuncTable = () => {
+    // Store relevant data structures (quadruples, funcTable, and constantsTable) for virtual machine
+    relevantDSVM = {quadruples, funcTable, constantsTable}
+
+    // Delete funcTable
+    funcTable = null
+}
+
+// Erases the contents of constantsTable, as program has ended and there is no need for it anymore
+deleteConstantsTable = ()  => {
+    constantsTable = null
+}
+
+// Erase the contents of every other DS used, as program has ended
+deleteUsedDS = () => {
+    // Quadruples
+    quadruples = null
+
+    // Stacks
+    operandStack = null
+    operatorStack = null
+    typeStack = null
+    jumpStack = null
 }
 
 
 
-
+// Gives one final look at the contents of the different DS used, before their deletion
 endStuff = () => {
-    console.log("- - - QUADRUPLES - - -")
-    console.log(quadruples)
+    //console.log("- - - QUADRUPLES - - -")
+    //console.log(quadruples)
 
     //console.log("- - - OPERAND STACK SIZE - - -")
     //console.log(operandStack.size())
@@ -635,10 +706,10 @@ endStuff = () => {
     //console.log("- - - OPERATOR STACK SIZE - - -")
     //console.log(operatorStack.size())
 
-    console.log("- - - FUNC DIR - - -")
-    for(const [key, value] of funcTable.entries()) {
-        console.log(key, value)
-    }
+    //console.log("- - - FUNC DIR - - -")
+    //for(const [key, value] of funcTable.entries()) {
+    //    console.log(key, value)
+    //}
 
     //console.log("- - - CONSTANTS TABLE - - -")
     //for(const [key, value] of constantsTable.entries()) {

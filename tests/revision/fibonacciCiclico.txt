@@ -1,0 +1,22 @@
+program fibonacciCiclico;
+
+vars {
+    i, j, k, n : int;
+}
+
+main() {
+    i = 0;
+    j = 1;
+
+    print("La serie se imprimira hasta que sea igual o mayor que N");
+    print("Ingrese en valor de N");
+    read(n);
+
+    while(i < n) {
+        print(i);
+
+        k = i + j;
+        i = j;
+        j = k;
+    }
+}
