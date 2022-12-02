@@ -1,0 +1,24 @@
+program testIfValores;
+
+vars {
+    a, b, c, d : int;
+    x, y, z : float;
+}
+
+main() {
+    print("Ingresa el valor de a");
+    read(a);
+    print("Ingresa el valor de b");
+    read(b);
+    print("Ingresa el valor de c");
+    read(c);
+    print("Ingresa el valor de d");
+    read(d);
+
+    if(a+b > c+d) {
+        print("hola");
+    } else {
+        print("adios");
+    }
+    print("end");
+}

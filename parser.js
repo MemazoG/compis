@@ -88,10 +88,13 @@ const grammar = {
     },
 
     "bnf": {
-        "start": [["program",   "endStuff();"]],
+        "start": [["program",   ""]],
  
         // General program structure
-        "program": [["program_keyword program_id ; vars_sec funcs_sec MAIN ( ) open_cb_main statements } EOF", ""]],
+        "program": [
+             ["program_keyword program_id ; vars_sec funcs_sec MAIN ( ) open_cb_main statements close_cb_main EOF",
+              "endStuff(); deleteFuncTable(); deleteConstantsTable(); deleteUsedDS();"]
+        ],
 
         // << NEURALGIC POINT >> - Creates functions directory after reading PROGRAM keyword
         "program_keyword": [
@@ -102,10 +105,13 @@ const grammar = {
         // << NEURALGIC POINT >> - Calls mainStart function, which completes goTo MAIN quadruple, just before MAIN's statements begin
         "open_cb_main": [["{", "mainStart()"]],
 
+        // << NEURALGIC POINT >> - Main function has ended
+        "close_cb_main": [["}", "mainEnd()"]],
+
         // << NEURALGIC POINT >> - After reading the program's name, adds it to the functions directory
         "program_id": [
              ["ID",
-              "setCurrType('-'); setCurrFuncName($1); addFuncToFuncTable($1); setProgramId($1);"]
+              "setCurrType('program'); setCurrFuncName($1); addFuncToFuncTable($1); setProgramId($1);"]
          ],
 
         // << NEURALGIC POINT >> - After reading a type, assigns it to the currType variable
@@ -508,7 +514,7 @@ const grammar = {
              [")", "removeFakeBottom()"]
          ],
  
-         "func_call": [["func_name_id open_par_func_call args ) ;", ""]],
+         "func_call": [["func_name_id open_par_func_call args )", ""]],
  
          "sp_func": [
              ["MEAN ( var ) ;", ""],

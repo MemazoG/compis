@@ -1,0 +1,17 @@
+program testWhileValores;
+
+vars {
+    a, b, c : int;
+}
+
+main() {
+    a = 5;
+    b = 10;
+    c = 1;
+
+    while(a < b) {
+        a = a + c;
+        print(a);
+    }
+    print("adios");
+}
