@@ -448,6 +448,9 @@ async function virtualMachine(relevantDSVM) {
                     // If resInt is NaN, opRes is NOT an int. Throw error
                     if(isNaN(resInt) || opRes != resInt) {
                         throw new Error(`Type mismatch. Expected int`)
+                    } else {
+                        // Save result
+                        setValue(resAddress, resInt, "vars")
                     }
                 } else if(type === "float") {
                     // Parse opRes to float
@@ -455,17 +458,20 @@ async function virtualMachine(relevantDSVM) {
                     // If resFloat is NaN, opRes is NOT a float. Throw error
                     if(isNaN(resFloat) || opRes != resFloat) {
                         throw new Error(`Type mismatch. Expected float`)
+                    } else {
+                        // Save result
+                        setValue(resAddress, resFloat, "vars")
                     }
                 } else {
                     // char
                     // If received input is NOT 1 in length, throw error
                     if(opRes.length != 1) {
                         throw new Error(`Type mismatch. Expected char`)
+                    } else {
+                        // Save result
+                        setValue(resAddress, opRes, "vars")
                     }
                 }
-
-                // Save result
-                setValue(resAddress, opRes, "vars")
 
                 // Move instruction pointer to the next quadruple
                 ip++
