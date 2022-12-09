@@ -330,7 +330,9 @@ const grammar = {
              ["CTE_INT", ""]
         ],
  
-        "void_func_call": [["func_name_id open_par_func_call args close_par_func_call ;", ""]],
+        "void_func_call": [
+          ["func_name_id open_par_func_call args close_par_func_call ;",
+           "funcCallEnd(); popFuncStacks();"]],
 
         // << NEURALGIC POINT >> - Verify function name exists in funcTable
         "func_name_id": [["ID", "verifyFuncExists($1)"]],
@@ -354,7 +356,7 @@ const grammar = {
              ["", ""]
          ],
  
-         "return": [["RETURN ( expression ) ;", ""]],
+         "return": [["RETURN ( expression ) ;", "handleReturn()"]],
  
          // General structure for an expression. Starts with operators of least priority and works towards
          // those with the most priority
@@ -514,7 +516,9 @@ const grammar = {
              [")", "removeFakeBottom()"]
          ],
  
-         "func_call": [["func_name_id open_par_func_call args )", ""]],
+         "func_call": [
+          ["func_name_id open_par_func_call args close_par_func_call",
+           "funcCallEnd(); funcReturn(); popFuncStacks();"]],
  
          "sp_func": [
              ["MEAN ( var ) ;", ""],

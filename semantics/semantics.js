@@ -63,7 +63,11 @@ let paramList = []
 let paramNameList = []
 
 // Iterates over params during the matching in function call
-let currParam = 0
+let paramCount = new Stack()
+let paramTypes = new Stack()
+
+// True when a return statement is identified inside non-void function
+let hasReturnStmt = false
 
 // Helps with counting number of variables of each type inside a function
 let funcSizes = null
@@ -101,6 +105,7 @@ setProgramId = (name) => {
 
 // Registers a function to funcTable
 addFuncToFuncTable = (funcId) => {
+    //console.log(`- - - Agregando funcion ${funcId} de tipo ${currType} a funcTable`)
     // Checks if function already exists
     if(funcTable.has(funcId)) {
         throw new Error(`Multiple declaration. A function with the name "${funcId}" already exists`)
@@ -122,6 +127,8 @@ addFuncToFuncTable = (funcId) => {
                 type: currType,
                 vAddr: funcVarAddr
             })
+            // Mark the return address to the newly created variable for the function
+            funcTable.get(funcId).retAddress = funcVarAddr
         }
     }
 }
@@ -225,7 +232,12 @@ countLocalVars = () => {
     paramNameList = []
 
     // Insert into funcTable the number of localVars
-    funcTable.get(funcName).localVars = localVars
+    //funcTable.get(funcName).localVars = localVars
+    funcSizes = new Map()
+    funcSizes.set("varsSizes", localVars)
+    funcSizes.set("tempsSizes", {int: 0, float: 0, char: 0})
+
+    funcTable.get(funcName).funcSizeCount = funcSizes
 }
 
 // Save into funcTable the current quadruple, marks function start quadruple
@@ -236,6 +248,11 @@ funcQuadruplesStart = () => {
 // Function ends. Delete its varTable, generate ENDFUNC action, insert the number of temps used into funcTable. If not a void-function, check if something has been returned
 funcEnd = () => {
     // If function is non-void, check if something has been returned
+    if(funcTable.get(funcName).type !== "void") {
+        if(!hasReturnStmt) {
+            throw new Error(`Non-void functions must have at least one return statement.`)
+        }
+    }
 
     // Delete varTable
     funcTable.get(funcName).varTable = null
@@ -249,10 +266,17 @@ funcEnd = () => {
         float: virtualMemory.countTemps("float"),
         char: virtualMemory.countTemps("char")
     }
-    funcTable.get(funcName).tempVars = tempVars
+    //funcTable.get(funcName).tempVars = tempVars
+
+    funcSizes.get("tempsSizes").int = tempVars.int
+    funcSizes.get("tempsSizes").float = tempVars.float
+    funcSizes.get("tempsSizes").char = tempVars.char
 
     // Function is over, can clear the virtual memory of its variables
     virtualMemory.clearLocalAddresses()
+
+    funcSizes = null
+    hasReturnStmt = false
 }
 
 // Function that receives a name and checks if it is registered in funcTable
@@ -260,6 +284,7 @@ verifyFuncExists = (name) => {
     if(funcTable.has(name)) {
         // Function exists. Store its name in funcCalled to remember its name when generating ERA quadruple
         funcCalled.push(name)
+        insertFakeBottom()
     } else {
         // Function does not exist --> ERROR
         throw new Error(`Function does not exist.`)
@@ -271,14 +296,16 @@ generateEra = () => {
     generateQuadruple(getOpCode("era"), funcCalled.peek(), "-", "-")
 
     // Prepare for parameter matching
-    currParam = 0
+    paramCount.push(1)
+    const currFuncSignature = funcTable.get(funcCalled.peek()).paramTypeList
+    //console.log(currFuncSignature)
+    paramTypes.push(currFuncSignature)
 }
 
-// Matches the current argument (top of operandStack) with the current param (number given by currParam)
+// Matches the current argument (top of operandStack) with the current param
 matchParam = () => {
-    if(currParam >= funcTable.get(funcCalled.peek()).paramTypeList.length) {
-        // Arguments given > expected, throw error
-        throw new Error(`Function does not expect this number of arguments.`)
+    if(paramCount.peek() - 1 >= paramTypes.peek().length) {
+        throw new Error(`Parameter number mismatch`)
     }
 
     const currArg = operandStack.peek()
@@ -287,25 +314,107 @@ matchParam = () => {
     const argType = typeStack.peek()
     typeStack.pop()
 
-    if(argType === funcTable.get(funcCalled.peek()).paramTypeList[currParam]) {
+    if(argType === paramTypes.peek()[paramCount.peek() - 1]) {
         // Type matches
-        const resParam = "param" + currParam
+        const resParam = paramCount.peek()
         generateQuadruple(getOpCode("param"), currArg, "-", resParam)
+
+        // Move param counter
+        const currParamNum = paramCount.peek()
+        paramCount.pop()
+        paramCount.push(currParamNum + 1)
     } else {
         // Does not match
-        console.log("ARGUMENT TYPE:", argType)
-        console.log("EXPECTED:", funcTable.get(funcCalled.peek()).paramTypeList[currParam])
+        //console.log("ARGUMENT TYPE:", argType)
+        //console.log("EXPECTED:", paramTypes.peek()[paramCount.peek() - 1])
         throw new Error(`Argument does not match parameter.`)
     }
-
-    currParam++
 }
 
 // Verify that there are no missing parameters (call has less than expected)
 paramsEnd = () => {
-    if(currParam < funcTable.get(funcCalled.peek()).paramTypeList.length) {
-        throw new Error(`Function expected more parameters.`)
+    if(paramCount.peek() - 1 !== paramTypes.peek().length) {
+        throw new Error(`Parameter number mismatch.`)
     }
+}
+
+// Function call has ended. Generate GOSUB quadruple
+funcCallEnd = () => {
+    // Get function's starting quadruple
+    const funcStartQuadruple = funcTable.get(funcCalled.peek()).start
+
+    // Generate quadruple
+    generateQuadruple(getOpCode("gosub"), funcCalled.peek(), "-", funcStartQuadruple)
+
+    removeFakeBottom()
+}
+
+// Pops the top of the stacks used for functions, as the top element is not needed anymore
+popFuncStacks = () => {
+    funcCalled.pop()
+    paramCount.pop()
+    paramTypes.pop()
+}
+
+// Handles the return of the value for non-void functions
+funcReturn = () => {
+    // Throws an error if the function called is void, as they do not return anything
+    if(funcTable.get(funcCalled.peek()).type === "void") {
+        throw new Error(`The function called is of type void and does not return any value`)
+    }
+
+    // Return type of current function
+    const funcReturnType = funcTable.get(funcCalled.peek()).type
+
+    // "Secret" global variable where the return value will be placed
+    const returnAddress = funcTable.get(programName).varTable.get(funcCalled.peek()).vAddr
+    
+    //console.log("- - - - -", funcName, "- - - - - ")
+    // Let's know where the function was called from: from main (global environment) or from another function (local environment)
+    let scope
+    if(funcName == programName) {
+        // From main - Global environment
+        scope = "global"
+    } else {
+        scope = "local"
+    }
+
+    // console.log(funcTable.get(programName).varTable.get(funcCalled.peek()))
+    // console.log(`FUNCTION NAME --> ${funcCalled.peek()}.Func return type --> ${funcReturnType}. Func return address --> ${returnAddress}`)
+    // Reserve an address to store value
+    const virtAddress = virtualMemory.reserveAddress(scope, funcReturnType, "temp")
+
+    // Generate quadruple
+    generateQuadruple(getOpCode("="), returnAddress, "-", virtAddress)
+
+    operandStack.push(virtAddress)
+    typeStack.push(funcReturnType)
+}
+
+// Return statement
+handleReturn = () => {
+    // Checks if current function is the main or of type void
+    if(funcName === programName) {
+        throw new Error(`Return statements can only be placed inside non-void functions`)
+    } else if(funcTable.get(funcName).type === "void") {
+        throw new Error(`Return statements cannot be placed in void functions.`)
+    }
+
+    // Get return value and type from the top of the operand and type stack
+    const res = operandStack.peek()
+    operandStack.pop()
+    const resType = typeStack.peek()
+    typeStack.pop()
+    // console.log(operandStack.size(), typeStack.size())
+
+    // // If returned type is different than return type of function, throw error
+    if(resType !== funcTable.get(funcName).type) {
+        throw new Error(`Return type mismatch.`)
+    }
+
+    generateQuadruple(getOpCode("return"), "-", "-", res)
+
+    hasReturnStmt = true
 }
 
 // Adds the virtual address of the operand to operandStack
@@ -373,6 +482,7 @@ handleWriteExpression = () => {
     // Retrieve expression's result from operandStack
     const res = operandStack.peek()
     operandStack.pop()
+    typeStack.pop()
 
     generateQuadruple(getOpCode("print"), "-", "-", res)
 }
@@ -407,6 +517,7 @@ generateReadQuadruple = (varName) => {
         // Found - Generate quadruple
         const res = operandStack.peek()
         operandStack.pop()
+        typeStack.pop()
         generateQuadruple(getOpCode("read"), "", "", res)
     } else {
         // Not Fount - Throw error
@@ -697,19 +808,19 @@ deleteUsedDS = () => {
 
 // Gives one final look at the contents of the different DS used, before their deletion
 endStuff = () => {
-    //console.log("- - - QUADRUPLES - - -")
-    //console.log(quadruples)
+    // console.log("- - - QUADRUPLES - - -")
+    // console.log(quadruples)
 
-    //console.log("- - - OPERAND STACK SIZE - - -")
-    //console.log(operandStack.size())
+    // console.log("- - - OPERAND STACK SIZE - - -")
+    // console.log(operandStack.size())
 
-    //console.log("- - - OPERATOR STACK SIZE - - -")
-    //console.log(operatorStack.size())
+    // console.log("- - - OPERATOR STACK SIZE - - -")
+    // console.log(operatorStack.size())
 
-    //console.log("- - - FUNC DIR - - -")
-    //for(const [key, value] of funcTable.entries()) {
-    //    console.log(key, value)
-    //}
+    // console.log("- - - FUNC DIR - - -")
+    // for(const [key, value] of funcTable.entries()) {
+    //     console.log(key, value)
+    // }
 
     //console.log("- - - CONSTANTS TABLE - - -")
     //for(const [key, value] of constantsTable.entries()) {
