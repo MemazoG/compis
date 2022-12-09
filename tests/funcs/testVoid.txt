@@ -1,0 +1,27 @@
+program testVoid;
+
+vars {
+    a, b, c : int;
+    d, e, f : float;
+}
+
+function void despide() {
+    print("Adios");
+}
+
+function void saluda() {
+    print("Hola");
+    despide();
+}
+
+function void imprimeValor(int x) {
+    print("Valor de x", x);
+}
+
+main() {
+    print("Llamando a funcion");
+    saluda();
+
+    a = 5;
+    imprimeValor(a);
+}

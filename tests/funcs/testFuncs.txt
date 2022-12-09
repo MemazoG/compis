@@ -1,0 +1,37 @@
+program testFuncs;
+
+vars {
+    a, b, c : int;
+}
+
+function int hola(int i, int j) {
+    vars {
+        x, y, z : float;
+    }
+
+    x = 4.5;
+    y = 5.0;
+    z = x * y + 4.5 / x * 7.907;
+    print("Hola", y);
+
+    return(i+j);
+}
+
+function void adios(int f) {
+    vars {
+        aa, bb, cc, dd : int;
+    }
+    aa = 1;
+    bb = 2;
+    cc = 3;
+    dd = aa * b - cc * (cc - 10 * bb * 15 / 10);
+    print("Adios");
+}
+
+main() {
+    a = 1;
+    b = 2;
+    c = hola(a, b);
+    adios(a);
+    print("HELLO");
+}

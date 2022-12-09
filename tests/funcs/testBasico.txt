@@ -1,0 +1,30 @@
+program basic;
+
+vars {
+    a, b: int;
+    c: float;
+}
+
+function void pelos(int x) {
+    vars {
+        y: int;
+    }
+    print(x);
+}
+
+function void recursivo(int x) {
+    if(x > 0) {
+        print(x);
+        recursivo(x - 1);
+    }
+}
+
+main() {
+    a = 10;
+    b = 50;
+    pelos(a);
+
+    print("Test recursion");
+    a = 5;
+    recursivo(a);
+}

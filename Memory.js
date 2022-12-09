@@ -35,6 +35,14 @@ class Memory {
         this.intTempsOff = intTempsOff
         this.floatTempsOff = floatTempsOff
         this.charTempsOff = charTempsOff
+
+        // Counters to help with parameter value assignation
+        this.intVarsCount = 0
+        this.floatVarsCount = 0
+        this.charVarsCount = 0
+        this.intTempsCount = 0
+        this.floatTempsCount = 0
+        this.charTempsCount = 0
     }
 
     // Sets a value to a given address
@@ -65,7 +73,26 @@ class Memory {
 
         // Set the value in the given index
         this.memory[addrTypeIndex][typeIndex][index] = value
+        // console.log(this.memory[addrTypeIndex][typeIndex])
 
+        // Update respective counter
+        if(addrType === "vars") {
+            if(type === "int") {
+                this.intVarsCount++
+            } else if(type === "float") {
+                this.floatVarsCount++
+            } else {
+                this.charVarsCount++
+            }
+        } else {
+            if(type === "int") {
+                this.intTempsCount++
+            } else if(type === "float") {
+                this.floatTempsCount++
+            } else {
+                this.charTempsCount++
+            }
+        }
     }
 
     // Gets a value given an address, type, and addrType
@@ -78,6 +105,8 @@ class Memory {
         } else {
             addrTypeIndex = 1
         }
+
+        // console.log(address, type, addrType)
 
         if(type === "int") {
             typeIndex = 0
@@ -146,6 +175,32 @@ class Memory {
                 return this.charTempsOff
             }
         }
+    }
+
+    // Assigns the value of a parameter to its respective address
+    addParam(opd, opdType) {
+        // console.log("Recibi", opd, opdType)
+        let type, index
+        // Get the indices of the type and its place in the array
+        if(opdType === "int") {
+            type = 0
+            index = this.intVarsCount
+            this.intVarsCount++
+        } else if(opdType === "float") {
+            type = 1
+            index = this.floatVarsCount
+            this.floatVarsCount++
+        } else {
+            type = 2
+            index = this.charVarsCount
+            this.charVarsCount++
+        }
+
+        // console.log(opd, type, index)
+        // Assign the value to its respective place
+        // Parameters will always be vars, not temps, so first cell is 0 (vars)
+        this.memory[0][type][index] = opd
+        // console.log(this.memory[0])
     }
 }
 

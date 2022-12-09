@@ -25,6 +25,7 @@ const operations = {
     "era": 20,
     "param": 21,
     "endfunc": 22,
+    "return": 23,
 }
 
 // Function that receives the operation code name and returns its assigned number

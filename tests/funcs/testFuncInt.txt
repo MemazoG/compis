@@ -1,0 +1,28 @@
+program testFuncInt;
+
+vars {
+    a, b, c : int;
+}
+
+function int sum(int x, int y) {
+    vars {
+        z : int;
+    }
+
+    z = x + y;
+    return(z);
+}
+
+function int one() {
+    return(1);
+}
+
+main() {
+    a = 10;
+    b = 10;
+    c = sum(a, b);
+    print("Valor de c", c);
+    c = one();
+    print("Nuevo valor de c", c);
+    print("Adios");
+}

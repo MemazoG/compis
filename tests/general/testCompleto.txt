@@ -1,0 +1,120 @@
+program fullTest;
+
+vars {
+    opcion: int;
+}
+
+function void fiboCiclico() {
+    vars {
+        i, j, k, n: int;
+    }
+
+    i = 0;
+    j = 1;
+
+    print("La serie se imprimira hasta que sea igual o mayor que N");
+    print("Ingrese en valor de N");
+    read(n);
+
+    while(i < n) {
+        print(i);
+
+        k = i + j;
+        i = j;
+        j = k;
+    }
+    print(" ");
+}
+
+function int fibo(int n) {
+    if(n <= 1) {
+        return(n);
+    }
+    return(fibo(n - 1) + fibo(n - 2));
+}
+
+function void fiboRecursivoInterfaz() {
+    vars {
+        x: int;
+    }
+
+    print("Ingresa el numero del termino que quieras saber");
+    read(x);
+
+    print(fibo(x), " ");
+}
+
+function int fact(int x) {
+    if(x == 0) {
+        return(1);
+    }
+    return(x * fact(x - 1));
+}
+
+function void factorial() {
+    vars {
+        num: int;
+    }
+
+    print("Ingresa un numero para calcular su factorial");
+    read(num);
+
+    print(fact(num), " ");
+}
+
+function void ordena() {
+    vars {
+        num1, num2, num3: float;
+    }
+
+    print("Ingresa el valor del primer numero");
+    read(num1);
+
+    print("Ingresa el valor del segundo numero");
+    read(num2);
+
+    print("Ingresa el valor del tercer numero");
+    read(num3);
+
+    if(num1 > num2 & num1 > num3) {
+        print(num1);
+    } else {
+        if(num2 > num1 & num2 > num3) {
+            print(num2);
+        } else {
+            print(num3);
+        }
+    }
+    print(" ");
+}
+
+main() {
+    print("Bienvenido", " ");
+
+    do {
+        print("1 Imprimir serie de fibonacci usando CICLOS");
+        print("2 Encontrar termino N de serie de fibonacci usando RECURSION");
+        print("3 Factorial de un entero usando RECURSION");
+        print("4 Encontrar el mayor de 3 numeros flotantes");
+        print("5 Salir del programa", " ");
+
+        print("Ingresa el numero que corresponda a la funcion que deseas ejecutar");
+        read(opcion);
+
+        if(opcion == 1) {
+            fiboCiclico();
+        }
+        if(opcion == 2) {
+            fiboRecursivoInterfaz();
+        }
+        if(opcion == 3) {
+            factorial();
+        }
+        if(opcion == 4) {
+            ordena();
+        }
+
+    } while(opcion != 5);
+
+    print("Adios");
+}
