@@ -200,7 +200,7 @@ async function virtualMachine(relevantDSVM) {
     executionStack = new Stack()
 
     executionStackSize = 0
-    executionStackMax = 15000
+    executionStackMax = 150000
     funcCalls = new Stack()
 
     // Initialize instruction pointer (ip)
