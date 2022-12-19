@@ -21,6 +21,9 @@ const globalOffsets = {
     intTempsOff: 2000,
     floatTempsOff: 4000,
     charTempsOff: 6000,
+    intPointersOff: 17000,
+    floatPointersOff: 18000,
+    charPointersOff: 19000,
 }
 
 const localOffsets = {
@@ -30,24 +33,27 @@ const localOffsets = {
     intTempsOff: 8000,
     floatTempsOff: 10000,
     charTempsOff: 12000,
+    intPointersOff: 20000,
+    floatPointersOff: 21000,
+    charPointersOff: 22000,
 }
 
 // Returns a type (int/float/char) given an address
 function getType(address) {
     if(isGlobal(address)) {
         // GLOBAL
-        if(address >= 1000 && address < 3000) {
+        if((address >= 1000 && address < 3000) || (address >= 17000 && address < 18000)) {
             return "int"
-        } else if(address >= 3000 && address < 5000) {
+        } else if((address >= 3000 && address < 5000) || (address >= 18000 && address < 19000)) {
             return "float"
         } else {
             return "char"
         }
     } else {
         // LOCAL
-        if(address >= 7000 && address < 9000) {
+        if((address >= 7000 && address < 9000) || (address >= 20000 && address < 21000)) {
             return "int"
-        } else if(address >= 9000 && address < 11000) {
+        } else if((address >= 9000 && address < 11000) || (address >= 21000 && address < 22000)) {
             return "float"
         } else {
             return "char"
@@ -61,27 +67,69 @@ function getAddrType(address, type) {
     if(isGlobal(address)) {
         // GLOBAL
         if(type === "int") {
-            return ((address >= 1000 && address < 2000) ? "vars" : "temps")
+            if(address >= 1000 && address < 2000) {
+                return "vars"
+            } else if(address >= 2000 && address < 3000) {
+                return "temps"
+            } else {
+                return "pointers"
+            }
+            // return ((address >= 1000 && address < 2000) ? "vars" : "temps")
         } else if(type === "float") {
-            return ((address >= 3000 && address < 4000) ? "vars" : "temps")
+            if(address >= 3000 && address < 4000) {
+                return "vars"
+            } else if(address >= 4000 && address < 5000) {
+                return "temps"
+            } else {
+                return "pointers"
+            }
+            // return ((address >= 3000 && address < 4000) ? "vars" : "temps")
         } else {
-            return ((address >= 5000 && address < 6000) ? "vars" : "temps")
+            if(address >= 5000 && address < 6000) {
+                return "vars"
+            } else if(address >= 6000 && address <7000) {
+                return "temps"
+            } else {
+                return "pointers"
+            }
+            // return ((address >= 5000 && address < 6000) ? "vars" : "temps")
         }
     } else {
         // LOCAL
         if(type === "int") {
-            return ((address >= 7000 && address < 8000) ? "vars" : "temps")
+            if(address >= 7000 && address < 8000) {
+                return "vars"
+            } else if(address >= 8000 && address < 9000) {
+                return "temps"
+            } else {
+                return "pointers"
+            }
+            // return ((address >= 7000 && address < 8000) ? "vars" : "temps")
         } else if(type === "float") {
-            return ((address >= 9000 && address < 10000) ? "vars" : "temps")
+            if(address >= 9000 && address < 10000) {
+                return "vars"
+            } else if(address >= 10000 && address < 11000) {
+                return "temps"
+            } else {
+                return "pointers"
+            }
+            // return ((address >= 9000 && address < 10000) ? "vars" : "temps")
         } else {
-            return ((address >= 11000 && address < 12000) ? "vars" : "temps")
+            if(address >= 11000 && address < 12000) {
+                return "vars"
+            } else if(address >= 12000 && address < 13000) {
+                return "temps"
+            } else {
+                return "pointers"
+            }
+            // return ((address >= 11000 && address < 12000) ? "vars" : "temps")
         }
     }
 }
 
 // Given an address, return true if it belongs to a global variable
 function isGlobal(address) {
-    if(address >= 1000 && address < 7000) {
+    if((address >= 1000 && address < 7000) || (address >= 17000 && address < 20000)) {
         return true
     }
     return false
@@ -90,6 +138,14 @@ function isGlobal(address) {
 // Given an address, return true if it belongs to a temp variable
 function isTemp(address) {
     if((address >= 2000 && address < 3000) || (address >= 4000 && address < 5000) || (address >= 8000 && address < 9000) || (address >= 10000 && address < 11000)) {
+        return true
+    }
+    return false
+}
+
+// Given an address, return true if it belongs to a pointer variable
+function isPointer(address) {
+    if(address >= 17000 && address < 23000) {
         return true
     }
     return false
@@ -118,17 +174,38 @@ function getOperandValue(address) {
         if(isGlobal(address)) {
             // Work with data segment
             // Get value from memory (dataSegment)
-            return dataSegment.getValue(address, varType, varAddrType)
+            // return dataSegment.getValue(address, varType, varAddrType)
+            if(isTemp(address)) {
+                // console.log("GLOBAL TEMPORAL")
+                return dataSegment.getValue(address, varType, varAddrType)
+            } else if(isPointer(address)) {
+                // console.log("GLOBAL POINTER. Tipo:", varType, "Dirección:", address)
+                const actualAddress = getPointingAddress(address, varType, "global")
+                // console.log("Ve a ver que hay en la", actualAddress)
+                return dataSegment.getValue(address, varType, varAddrType)
+            } else {
+                // console.log("GLOBAL VAR")
+                return dataSegment.getValue(address, varType, varAddrType)
+            }
         } else {
             // Work with execution stack
             // Get value from local memory (executionStack)
-            return executionStack.peek().memory.getValue(address, varType, varAddrType)
+            // return executionStack.peek().memory.getValue(address, varType, varAddrType)
+            if(isTemp(address)) {
+                return executionStack.peek().memory.getValue(address, varType, varAddrType)
+            } else if(isPointer(address)) {
+                // const actualAddress = getPointingAddress(address, varType, "local")
+                return executionStack.peek().memory.getValue(address, varType, varAddrType)
+            } else {
+                return executionStack.peek().memory.getValue(address, varType, varAddrType)
+            }
         }
     }
 }
 
 // Sets a value to a memory address
 function setValue(address, value, addrType) {
+    // if(addrType === "pointers"){console.log(isGlobal(address))}
     if(isGlobal(address)) {
         // Work with data segment
         dataSegment.setValue(address, value, addrType)
@@ -162,8 +239,31 @@ function getFuncSize(funcSizeCount) {
     total += funcSizeCount.get("tempsSizes").int
     total += funcSizeCount.get("tempsSizes").float
     total += funcSizeCount.get("tempsSizes").char
+    total += funcSizeCount.get("pointersSizes").int
+    total += funcSizeCount.get("pointersSizes").float
+    total += funcSizeCount.get("pointersSizes").char
 
     return total
+}
+
+function getPointingAddress(address, ptrType, scope) {
+    if(scope === "global") {
+        // Global environment, use data segment
+        return dataSegment.getValue(address, ptrType, "pointers")
+    } else {
+        // Local environment, use execution stack
+        return executionStack.peek().memory.getValue(address, ptrType, "pointers")
+    }
+}
+
+function getPointerType(address) {
+    if((address >= 17000 && address < 18000) || (address >= 20000 && address < 21000)) {
+        return "int"
+    } else if((address >= 18000 && address < 19000) || (address >= 21000 && address < 22000)) {
+        return "float"
+    } else {
+        return "char"
+    }
 }
 
 // Executes the virtual machine
@@ -223,14 +323,43 @@ async function virtualMachine(relevantDSVM) {
             case 1:
                 // Get values of operands
                 opd1 = getOperandValue(quadruple.opd1)
-                opd2 = getOperandValue(quadruple.opd2)
+                opd2 = quadruple.opd2
+
+                // Pointer address, see where it's pointing
+                if(quadruple.opd2[0] === "(") {
+                    opd2 = parseInt(quadruple.opd2.slice(1))
+                    // console.log("Antes del cambio:", opd2)
+                    // opd2 = getOperandValue(opd2)
+                    // // const ptrType = getPointerType(opd2)
+                    // // const scope = isGlobal(opd2) ? "global" : "local"
+                    // // opd2 = getPointingAddress(opd2, ptrType, scope)
+
+                    // console.log("Despues del cambio", opd2)
+                    // console.log("Ahi hay", getOperandValue(opd2))
+                }
+
+                opd2 = getOperandValue(opd2)
+
+                if(isPointer(quadruple.opd1)) {
+                    opd1 = getOperandValue(opd1)
+                }
+                if(isPointer(quadruple.opd2)) {
+                    opd2 = getOperandValue(opd2)
+                }
+
                 // Get result address
                 resAddress = quadruple.res
                 // Perform addition
                 opRes = opd1 + opd2
 
-                // Save result (which is a temp) in memory
-                setValue(resAddress, opRes, "temps")
+                // See if address type is pointer or temp
+                let addressType = isPointer(resAddress) ? "pointers" : "temps"
+                
+                // console.log("Pon el valor", opRes, "en la dirección", resAddress)
+
+                // Save result in memory
+                setValue(resAddress, opRes, addressType)
+                // console.log("+ Asigno el valor", opRes, "a la dirección", resAddress)
 
                 //console.log("****************SUMA****************")
                 //console.log(opd1, opd2)
@@ -244,6 +373,14 @@ async function virtualMachine(relevantDSVM) {
                 // Get values of operands
                 opd1 = getOperandValue(quadruple.opd1)
                 opd2 = getOperandValue(quadruple.opd2)
+
+                if(isPointer(quadruple.opd1)) {
+                    opd1 = getOperandValue(opd1)
+                }
+                if(isPointer(quadruple.opd2)) {
+                    opd2 = getOperandValue(opd2)
+                }
+
                 // Get result address
                 resAddress = quadruple.res
                 // Perform substraction
@@ -264,6 +401,14 @@ async function virtualMachine(relevantDSVM) {
                 // Get values of operands
                 opd1 = getOperandValue(quadruple.opd1)
                 opd2 = getOperandValue(quadruple.opd2)
+
+                if(isPointer(quadruple.opd1)) {
+                    opd1 = getOperandValue(opd1)
+                }
+                if(isPointer(quadruple.opd2)) {
+                    opd2 = getOperandValue(opd2)
+                }
+
                 // Get result address
                 resAddress = quadruple.res
                 // Perform multiplication
@@ -284,6 +429,14 @@ async function virtualMachine(relevantDSVM) {
                 // Get values of operands
                 opd1 = getOperandValue(quadruple.opd1)
                 opd2 = getOperandValue(quadruple.opd2)
+
+                if(isPointer(quadruple.opd1)) {
+                    opd1 = getOperandValue(opd1)
+                }
+                if(isPointer(quadruple.opd2)) {
+                    opd2 = getOperandValue(opd2)
+                }
+
                 // Get result address
                 resAddress = quadruple.res
                 // Perform division
@@ -304,6 +457,16 @@ async function virtualMachine(relevantDSVM) {
                 // Get values of operands
                 opd1 = getOperandValue(quadruple.opd1)
                 opd2 = getOperandValue(quadruple.opd2)
+
+                // console.log("OPD1 -->", opd1, "OPD2 -->", opd2)
+                if(isPointer(quadruple.opd1)) {
+                    opd1 = getOperandValue(opd1)
+                }
+                if(isPointer(quadruple.opd2)) {
+                    opd2 = getOperandValue(opd2)
+                }
+                // console.log("OPD1 -->", opd1, "OPD2 -->", opd2)
+
                 // Get result address
                 resAddress = quadruple.res
                 // Apply relational operator and save result
@@ -324,6 +487,14 @@ async function virtualMachine(relevantDSVM) {
                 // Get values of operands
                 opd1 = getOperandValue(quadruple.opd1)
                 opd2 = getOperandValue(quadruple.opd2)
+
+                if(isPointer(quadruple.opd1)) {
+                    opd1 = getOperandValue(opd1)
+                }
+                if(isPointer(quadruple.opd2)) {
+                    opd2 = getOperandValue(opd2)
+                }
+
                 // Get result address
                 resAddress = quadruple.res
                 // Apply relational operator and save result
@@ -344,6 +515,14 @@ async function virtualMachine(relevantDSVM) {
                 // Get values of operands
                 opd1 = getOperandValue(quadruple.opd1)
                 opd2 = getOperandValue(quadruple.opd2)
+
+                if(isPointer(quadruple.opd1)) {
+                    opd1 = getOperandValue(opd1)
+                }
+                if(isPointer(quadruple.opd2)) {
+                    opd2 = getOperandValue(opd2)
+                }
+
                 // Get result address
                 resAddress = quadruple.res
                 // Apply relational operator and save result
@@ -364,6 +543,14 @@ async function virtualMachine(relevantDSVM) {
                 // Get values of operands
                 opd1 = getOperandValue(quadruple.opd1)
                 opd2 = getOperandValue(quadruple.opd2)
+
+                if(isPointer(quadruple.opd1)) {
+                    opd1 = getOperandValue(opd1)
+                }
+                if(isPointer(quadruple.opd2)) {
+                    opd2 = getOperandValue(opd2)
+                }
+
                 // Get result address
                 resAddress = quadruple.res
                 // Apply relational operator and save result
@@ -384,6 +571,14 @@ async function virtualMachine(relevantDSVM) {
                 // Get values of operands
                 opd1 = getOperandValue(quadruple.opd1)
                 opd2 = getOperandValue(quadruple.opd2)
+
+                if(isPointer(quadruple.opd1)) {
+                    opd1 = getOperandValue(opd1)
+                }
+                if(isPointer(quadruple.opd2)) {
+                    opd2 = getOperandValue(opd2)
+                }
+
                 // Get result address
                 resAddress = quadruple.res
                 // Apply relational operator and save result
@@ -404,6 +599,14 @@ async function virtualMachine(relevantDSVM) {
                 // Get values of operands
                 opd1 = getOperandValue(quadruple.opd1)
                 opd2 = getOperandValue(quadruple.opd2)
+
+                if(isPointer(quadruple.opd1)) {
+                    opd1 = getOperandValue(opd1)
+                }
+                if(isPointer(quadruple.opd2)) {
+                    opd2 = getOperandValue(opd2)
+                }
+
                 // Get result address
                 resAddress = quadruple.res
                 // Apply relational operator and save result
@@ -424,6 +627,14 @@ async function virtualMachine(relevantDSVM) {
                 // Get values of operands
                 opd1 = getOperandValue(quadruple.opd1)
                 opd2 = getOperandValue(quadruple.opd2)
+
+                if(isPointer(quadruple.opd1)) {
+                    opd1 = getOperandValue(opd1)
+                }
+                if(isPointer(quadruple.opd2)) {
+                    opd2 = getOperandValue(opd2)
+                }
+
                 // Get result address
                 resAddress = quadruple.res
                 // Apply logical operator and save result
@@ -444,6 +655,14 @@ async function virtualMachine(relevantDSVM) {
                 // Get values of operands
                 opd1 = getOperandValue(quadruple.opd1)
                 opd2 = getOperandValue(quadruple.opd2)
+
+                if(isPointer(quadruple.opd1)) {
+                    opd1 = getOperandValue(opd1)
+                }
+                if(isPointer(quadruple.opd2)) {
+                    opd2 = getOperandValue(opd2)
+                }
+
                 // Get result address
                 resAddress = quadruple.res
                 // Apply logical operator and save result
@@ -464,19 +683,41 @@ async function virtualMachine(relevantDSVM) {
                 // Get value of result
                 opd1 = getOperandValue(quadruple.opd1)
 
+                if(isPointer(quadruple.opd1)) {
+                    // console.log(opd1)
+                    opd1 = getOperandValue(opd1)
+                }
+
                 // Get result address
                 resAddress = quadruple.res
 
                 let addrType
                 if(isTemp(resAddress)) {
                     addrType = "temps"
+                } else if(isPointer(resAddress)) {
+                    addrType = "pointers"
+                    // console.log("Dirección:", resAddress, "Valor:", opd1)
                 } else {
                     addrType = "vars"
                 }
+
+                if(addrType === "pointers") {
+                    // console.log("Dirección:", resAddress)
+                    // Get ACTUAL address (the one it's pointing to)
+                    const ptrType = getPointerType(resAddress)
+                    const scope = isGlobal(resAddress) ? "global" : "local"
+                    // console.log("ORIGINAL ADDRESS", resAddress)
+                    resAddress = getPointingAddress(resAddress, ptrType, scope)
+                    // console.log("Dirección traducida:", resAddress)
+                    addrType = "vars"
+                    // console.log("= Asigno el valor", opd1, "a la dirección", resAddress)
+                }
+
                 // Assign opd1 to resAddress
                 setValue(resAddress, opd1, addrType)
 
-                //console.log("****************ASIGNACION****************")
+                // console.log("VALOR:", getOperandValue(resAddress))
+                // console.log("****************ASIGNACION****************")
                 // console.log(opd1, resAddress)
 
                 // Move instruction pointer to next quadruple
@@ -541,35 +782,51 @@ async function virtualMachine(relevantDSVM) {
                 // Get type of expected result, will be used for checking
                 const type = getType(resAddress)
                 
+                let resInt, resFloat
                 if(type === "int") {
                     // Parse opRes to int
-                    const resInt = parseInt(opRes)
+                    resInt = parseInt(opRes)
                     // If resInt is NaN, opRes is NOT an int. Throw error
                     if(isNaN(resInt) || opRes != resInt) {
                         throw new Error(`Type mismatch. Expected int`)
-                    } else {
-                        // Save result
-                        setValue(resAddress, resInt, "vars")
                     }
                 } else if(type === "float") {
                     // Parse opRes to float
-                    const resFloat = parseFloat(opRes)
+                    resFloat = parseFloat(opRes)
                     // If resFloat is NaN, opRes is NOT a float. Throw error
                     if(isNaN(resFloat) || opRes != resFloat) {
                         throw new Error(`Type mismatch. Expected float`)
-                    } else {
-                        // Save result
-                        setValue(resAddress, resFloat, "vars")
                     }
                 } else {
                     // char
                     // If received input is NOT 1 in length, throw error
                     if(opRes.length != 1) {
                         throw new Error(`Type mismatch. Expected char`)
-                    } else {
-                        // Save result
-                        setValue(resAddress, opRes, "vars")
                     }
+                }
+
+                let addrT
+                if(isTemp(resAddress)) {
+                    addrT = "temps"
+                } else if(isPointer(resAddress)) {
+                    addrT = "pointers"
+                } else {
+                    addrT = "vars"
+                }
+
+                if(addrT === "pointers") {
+                    const scope = isGlobal(resAddress) ? "global" : "local"
+                    resAddress = getPointingAddress(resAddress, type, scope)
+                    addrT = "vars"
+                }
+
+                if(type === "int") {
+                    // console.log(resInt, resAddress)
+                    setValue(resAddress, resInt, "vars")
+                } else if(type === "float") {
+                    setValue(resAddress, resFloat, "vars")
+                } else {
+                    setValue(resAddress, opRes, "vars")
                 }
 
                 // Move instruction pointer to the next quadruple
@@ -581,6 +838,13 @@ async function virtualMachine(relevantDSVM) {
             case 18:
                 // Get element to be printed
                 opRes = getOperandValue(quadruple.res)
+                // console.log("Dirección recibida -->", quadruple.res, "Valor real -->", opRes)
+
+                // if(isPointer(quadruple.res)) {
+                //     opRes = getOperandValue(getOperandValue(quadruple.res))
+                // } else {
+                //     opRes = getOperandValue(quadruple.res)
+                // }
 
                 // If constant is string, remove the quotes that surround it
                 // Check if it is a string constant by looking at its address
@@ -588,7 +852,10 @@ async function virtualMachine(relevantDSVM) {
                     // It is a string constant, remove quotes
                     opRes = opRes.slice(1, -1)
                 }
-
+                if(isPointer(quadruple.res)) {
+                    opRes = getOperandValue(opRes)
+                }
+                // console.log("Dirección recibida:", quadruple.res, "Dirección traducida:", opRes)
                 // Print to console
                 console.log(opRes)
 
@@ -689,6 +956,20 @@ async function virtualMachine(relevantDSVM) {
                 // Return instruction pointer to its previous place
                 ip = executionStack.peek().retAddress
                 executionStack.pop()
+                break
+
+            // verify
+            case 24:
+                let index = getOperandValue(quadruple.opd1)
+                let limSup = getOperandValue(quadruple.res)
+                // console.log("Verifica que", index, "sea menor que", limSup)
+
+                // Check if index is inside limits
+                if(index > limSup || index < 0) {
+                    throw new Error(`Index out of bounds`)
+                }
+
+                ip++
                 break
         }
     }

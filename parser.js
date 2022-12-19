@@ -152,13 +152,13 @@ const grammar = {
  
         // If var is an array or a matrix, follows first production. If not, follows empty production
         "var_arr": [
-             ["[ CTE_INT ] var_mat", ""],
+             ["[ CTE_INT ] var_mat", "updateXDim($2);"],
              ["", ""]
         ],
  
         // If var is a matrix, follows first production. If not (it is an array), follows empty production
         "var_mat": [
-             ["[ CTE_INT ]", ""],
+             ["[ CTE_INT ]", "updateYDim($2);"],
              ["", ""]
         ],
  
@@ -216,17 +216,21 @@ const grammar = {
              ["", ""]
         ],
  
-        "var": [["ID id_arr", ""]],
- 
-        "id_arr": [
-             ["[ expression ] id_mat", ""],
-             ["", ""]
+        // "var": [["var_id_name id_arr", ""]],
+
+        "var": [
+             ["var_id_name open_br_arrmat expression close_br_arrmat", "arrMatEnd();"],
+             ["var_id_name open_br_arrmat expression close_br_arrmat open_br_mat expression close_br_arrmat", "arrMatEnd();"],
+             ["var_id_name func_call", "$$"],
         ],
+
+        "var_id_name": [["ID", "setCurrId($1);"]],
  
-        "id_mat": [
-             ["[ expression ]", ""],
-             ["", ""]
-        ],
+        "open_br_arrmat": [["[", "addIdOperand(); arrMatStart();"]],
+
+        "open_br_mat": [["[", "addArrMatDimension();"]],
+
+        "close_br_arrmat": [["]", "arrMatDimension();"]],
  
         "statements": [
              ["statement statements", ""],
@@ -258,7 +262,11 @@ const grammar = {
              ["=", "addToOperatorStack($1)"]
         ],
 
-        "var_name": [["var", "addToTypeAndOperandStacks($1, 'var')"]],
+        // var_name can be either a simple atomic variable, an index of an array, or an index of a matrix
+        "var_name": [
+             //["var", "addToTypeAndOperandStacks($1, 'var')"],
+             ["var", ""]
+        ],
  
         // General structure for read statement
         "read": [["READ ( read_var ) ;", ""]],
@@ -331,14 +339,14 @@ const grammar = {
         ],
  
         "void_func_call": [
-          ["func_name_id open_par_func_call args close_par_func_call ;",
+          ["var_id_name open_par_func_call args close_par_func_call ;",
            "funcCallEnd(); popFuncStacks();"]],
 
         // << NEURALGIC POINT >> - Verify function name exists in funcTable
-        "func_name_id": [["ID", "verifyFuncExists($1)"]],
+        "func_name_id": [["ID", "verifyFuncExists($1);"]],
 
         // << NEURALGIC POINT >> - Generate ERA quadruple and prepare for parameter matching
-        "open_par_func_call": [["(", "generateEra()"]],
+        "open_par_func_call": [["(", "funcStart(); generateEra();"]],
 
         // << NEURALGIC POINT >> - Check if all parameters were matched, none missing
         "close_par_func_call": [[")", "paramsEnd()"]],
@@ -503,7 +511,7 @@ const grammar = {
              ["CTE_FLOAT", "addToTypeAndOperandStacks($1, 'float')"],
              ["CTE_CHAR", "addToTypeAndOperandStacks($1, 'char')"],
              ["var_name", ""],
-             ["func_call", ""]
+             // ["func_call", ""]
          ],
 
          // << NEURALGIC POINT >> - Adds a special symbol into operatorStack to simulate a "fake bottom". Helps when dealing with parentheses
@@ -517,8 +525,9 @@ const grammar = {
          ],
  
          "func_call": [
-          ["func_name_id open_par_func_call args close_par_func_call",
-           "funcCallEnd(); funcReturn(); popFuncStacks();"]],
+             ["", "addIdOperand();"], // NORMAL ATOMIC VARIABLE. NOT A FUNCTION CALL
+             ["open_par_func_call args close_par_func_call",
+              "funcCallEnd(); funcReturn(); popFuncStacks();"]],
  
          "sp_func": [
              ["MEAN ( var ) ;", ""],
