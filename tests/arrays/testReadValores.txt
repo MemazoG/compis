@@ -1,0 +1,15 @@
+program testing;
+
+vars {
+    y, arr[2], x: int;
+}
+
+main() {
+    print("Ingresa el valor de x");
+    read(x);
+    arr[0] = x;
+    arr[1] = x + x;
+
+    print("x", x);
+    print("arr0", arr[0], "arr1", arr[1]);
+}

@@ -1,0 +1,52 @@
+program find;
+
+vars {
+    arr[5], num: int;
+}
+
+function void llenaArr() {
+    vars {
+        x, y: int;
+    }
+
+    x = 0;
+    while(x < 5) {
+        print("Ingrese el valor de la casilla", x);
+        read(y);
+        arr[x] = y;
+
+        x = x + 1;
+    }
+}
+
+function void busca(int n) {
+    vars {
+        encontrado, i: int;
+    }
+
+    encontrado = 0;
+    i = 0;
+    while((i < 5)) {
+        if(arr[i] == n) {
+            encontrado = 1;
+            i = 6;
+        }
+
+        i = i + 1;
+    }
+
+    if(encontrado) {
+        print("Encontrado");
+    } else {
+        print("No encontrado");
+    }
+}
+
+main() {
+    llenaArr();
+
+    print("Ingresa el numero que deseas buscar");
+    read(num);
+
+    busca(num);
+}

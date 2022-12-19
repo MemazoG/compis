@@ -49,9 +49,15 @@ let currType = ""
 // Stores the name of the function called. It's a stack because of functions being called within functions
 let funcCalled = new Stack()
 
-// For handling dimensions of variables
-let dimX = 1
-let dimY = 1
+let currVarName = null
+
+// Holds id of current variable
+let currId = null
+
+let dimensionsStack = new Stack()
+let currDim = new Stack()
+let currDimList = new Stack()
+let dim2 = false
 
 // Id list (for variable declarations)
 let idList = []
@@ -135,11 +141,225 @@ addFuncToFuncTable = (funcId) => {
 
 // Adds an id to idList (because we don't know their type yet)
 addIdToIdList = (id) => {
-    idList.push(id)
-    /*idList.push({
-        name: id,
-        x: dimX,
-        y: dimY})*/
+    //idList.push(id)
+    idList.push({ name: id, x: 0, y: 0})
+
+    currVarName = id
+}
+
+updateXDim = (val) => {
+    // Throw error if size is less than 1
+    if(parseInt(val) < 1) {
+        throw new Error(`Dimension sizes for arrays and matrices must be greater than 0`)
+    }
+
+    for(let i = 0; i < idList.length; i++) {
+        if(idList[i].name === currVarName) {
+            // Update entry's X dimension value
+            idList[i].x = parseInt(val)
+        }
+    }
+}
+
+updateYDim = (val) => {
+    // Throw error if size is less than 1
+    if(parseInt(val) < 1) {
+        throw new Error(`Dimension sizes for arrays and matrices must be greater than 0`)
+    }
+
+    for(let i = 0; i < idList.length; i++) {
+        if(idList[i].name === currVarName) {
+            // Update entry's Y dimension value
+            idList[i].y = parseInt(val)
+        }
+    }
+}
+
+setCurrId = (idName) => {
+    currId = idName
+}
+
+addIdOperand = () => {
+    addToTypeAndOperandStacks(currId, "var")
+    
+    currId = null
+}
+
+arrMatStart = () => {
+    const opdAddress = operandStack.peek()
+    const opdType = typeStack.peek()
+
+    operandStack.pop()
+    typeStack.pop()
+
+    let baseAddress = arrMatId = arrMatType = null
+    let foundLocally = foundGlobally = false
+
+    // Search in current function's varTable
+    for(let [id, value] of funcTable.get(funcName).varTable) {
+        if(value.vAddress === opdAddress) {
+            if(value.dimension === null) {
+                throw new Error(`Trying to access an index of a variable that has no dimensions`)
+            }
+
+            arrMatId = id
+            arrMatType = value.type
+            currDimList.push(value.dimension)
+            baseAddress = value.vAddress
+            foundLocally = true // Found in local environment
+            break
+        }
+    }
+
+    // If it was not found locally
+    if(!foundLocally) {
+        // Search in global function's varTable
+        for(let [id, value] of funcTable.get(programName).varTable) {
+            if(value.vAddress === opdAddress) {
+                if(value.dimension === null) {
+                    throw new Error(`Trying to access an index of a variable that has no dimensions`)
+                }
+
+                arrMatId = id
+                arrMatType = value.type
+                currDimList.push(value.dimension)
+                baseAddress = value.vAddress
+                foundGlobally = true
+                break
+            }
+        }
+    }
+
+    currDim.push(1)
+
+    dimensionsStack.push({
+        arrMatId,
+        dimension: currDim.peek(),
+        baseAddress,
+        type: arrMatType,
+        foundGlobally
+    })
+
+    insertFakeBottom()
+}
+
+arrMatDimension = () => {
+    // Get index value from the top of operandStack
+    const indexingVar = operandStack.peek()
+    const indexingVarType = typeStack.peek()
+
+    // Check indexing variable's type
+    if(indexingVarType !== "int") {
+        throw new Error(`Indexing variable must be of type int`)
+    }
+
+    if(currDimList.peek() === null) {
+        throw new Error(`Trying to access the index of a variable that does not have the specified dimensions`)
+    }
+
+    // Generate VERIFY quadruple
+    generateQuadruple(getOpCode("verify"), indexingVar, "-", addToConstantsTable(currDimList.peek().limSup, "int"))
+    // generateQuadruple(getOpCode("verify"), indexingVar, "-", currDimList.peek().limSup)
+
+    
+    let scope
+    if(funcName === programName) {
+        // Current funcName === programName --> Scope of variables is GLOBAL
+        scope = "global"
+    } else {
+        // Current funcName != programName --> Scope of variables is LOCAL
+        scope = "local"
+    }
+
+    const type = dimensionsStack.peek().type === "char" ? "int" : dimensionsStack.peek().type
+
+    if(currDimList.peek().next !== null) {
+        // console.log("MATRIX")
+        // s1 * m1 quadruple
+        const resAddress = virtualMemory.reserveAddress(scope, type, "temp")
+        generateQuadruple(getOpCode("*"), indexingVar, addToConstantsTable(currDimList.peek().m, "int"), resAddress)
+
+        operandStack.pop()
+        typeStack.pop()
+
+        operandStack.push(resAddress)
+        typeStack.push(type)
+    }
+
+    if(currDim.peek() > 1) {
+        // console.log("MATRIX")
+        // (s1 * m1) + s2 quadruple
+        const right = operandStack.peek()
+        operandStack.pop()
+        typeStack.pop()
+        const left = operandStack.peek()
+        operandStack.pop()
+        typeStack.pop()
+
+        const resAddress = virtualMemory.reserveAddress(scope, type, "temp")
+
+        generateQuadruple(getOpCode("+"), left, right, resAddress)
+        // console.log(`ARRMATDIM Suma ${left} con ${right} y dejalo en ${resAddress}`)
+
+        operandStack.push(resAddress)
+        typeStack.push(type)
+        dim2 = true
+    }
+}
+
+addArrMatDimension = () => {
+    let newVal = currDim.peek() + 1
+    currDim.pop()
+    currDim.push(newVal)
+
+    dimensionsStack.peek().dimension = currDim.peek()
+    
+    newVal = currDimList.peek().next
+    currDimList.pop()
+    currDimList.push(newVal)
+}
+
+arrMatEnd = () => {
+    // Verify it is a matrix (has a second node)
+    const isMat = currDimList.peek().next !== null
+
+    if(isMat && !dim2) {
+        throw new Error(`Trying to access the index of a variable that does not have the specified dimensions`)
+    }
+
+    const auxOpd = operandStack.peek()
+    operandStack.pop()
+    typeStack.pop()
+
+    const baseVAddress = dimensionsStack.peek().baseAddress
+    const isGlobal = dimensionsStack.peek().foundGlobally
+
+    const left = auxOpd
+    const right = addToConstantsTable(baseVAddress, "int")
+    // console.log("Guardé a", baseVAddress, "en la tabla de constantes y se guardó en la", right)
+
+    const scope = isGlobal ? "global" : funcName == programName ? "global" : "local"
+    const type = dimensionsStack.peek().type
+    const resAddress = virtualMemory.reserveAddress(scope, type, "pointer")
+
+    // Update funcSizes
+    funcSizes.get("pointersSizes")[type]++
+
+    generateQuadruple(getOpCode("+"), left, "(" + right, resAddress)
+
+    // console.log(`ARRMATEND Suma ${auxOpd} con ${right} y dejalo en ${resAddress}`)
+    // console.log("{ + ,", left, right, resAddress, "}")
+
+    operandStack.push(resAddress)
+    typeStack.push(type)
+
+    removeFakeBottom()
+    dimensionsStack.pop()
+
+    // Clear values from dimension helpers
+    currDim.pop()
+    currDimList.pop()
+    dim2 = false
 }
 
 // Adds a variable to the varTable of its respective function
@@ -160,18 +380,66 @@ addVarsToVarTable = () => {
     
     // Loop through idList and add each variable
     for(let i=0; i<idList.length; i++) {
-        // Get an address for the variable in the virtual memory
-        let vAddr = virtualMemory.reserveAddress(scope, currType, "regular")
-
         // If an entry already exists, it means multiple declaration
-        if(funcTable.get(funcName).varTable.has(idList[i])) {
-            throw new Error(`Multiple declaration. A variable with the name ${idList[i]} already exists`)
+        if(funcTable.get(funcName).varTable.has(idList[i].name)) {
+            throw new Error(`Multiple declaration. A variable with the name ${idList[i].name} already exists`)
         } else {
             // If not, add it to the varTable
-            funcTable.get(funcName).varTable.set(idList[i], {
-                type: currType,
-                vAddress: vAddr
-            })
+
+            if(idList[i].x === 0 && idList[i].y === 0) {
+                // ATOMIC VARIABLE
+                // Add it to the varTable (reserve 1 spot in virtual memory)
+                funcTable.get(funcName).varTable.set(idList[i].name, {
+                    type: currType,
+                    vAddress: virtualMemory.reserveAddress(scope, currType, "regular")
+                })
+            } else if(idList[i].x > 0 && idList[i].y === 0) {
+                // ARRAY
+                //console.log("ARRAY")
+
+                // Dimension node
+                let dimNode = {
+                    limSup: idList[i].x - 1,
+                    m: 1,
+                    next: null,
+                }
+
+                // Add it to the varTable (reserve idList[i].x spots in virtual memory)
+                funcTable.get(funcName).varTable.set(idList[i].name, {
+                    type: currType,
+                    vAddress: virtualMemory.reserveMultipleAddresses(scope, currType, "regular", idList[i].x),
+                    dimension: dimNode,
+                })
+
+            } else {
+                // MATRIX
+                //console.log("MATRIX")
+
+                // Dimension node for columns (2nd node)
+                let dimNodeCols = {
+                    limSup: idList[i].y - 1,
+                    m: 1,
+                    next: null,
+                }
+
+                // Dimension node for rows (1st node)
+                let dimNodeRows = {
+                    limSup: idList[i].x - 1,
+                    m: idList[i].y,
+                    next: dimNodeCols,
+                }
+
+                // Get total number of indices to reserve that size in virtual memory
+                const totalSize = idList[i].x * idList[i].y
+
+                // Add it to the varTable (reserve its respective spots in virtual memory)
+                funcTable.get(funcName).varTable.set(idList[i].name, {
+                    type: currType,
+                    vAddress: virtualMemory.reserveMultipleAddresses(scope, currType, "regular", totalSize),
+                    dimension: dimNodeRows,
+                })
+                
+            }
         }
     }
     //console.log(funcTable.get(funcName))
@@ -181,6 +449,7 @@ addVarsToVarTable = () => {
 
 // Clears the array idList because its contents have already been used
 clearIdList = () => {
+    //console.log(idList)
     idList = []
 }
 
@@ -188,7 +457,7 @@ clearIdList = () => {
 registerParam = () => {
     // Add name to paramNameList, so I can differentiate parameters from other local variables in the function's varTable
     // PARCHE GUADALUPANO
-    paramNameList.push(idList[0])
+    paramNameList.push(idList[0].name)
 
     // Call function that will add it to varTable of the function
     addVarsToVarTable()
@@ -236,6 +505,7 @@ countLocalVars = () => {
     funcSizes = new Map()
     funcSizes.set("varsSizes", localVars)
     funcSizes.set("tempsSizes", {int: 0, float: 0, char: 0})
+    funcSizes.set("pointersSizes", {int: 0, float: 0, char: 0})
 
     funcTable.get(funcName).funcSizeCount = funcSizes
 }
@@ -281,6 +551,7 @@ funcEnd = () => {
 
 // Function that receives a name and checks if it is registered in funcTable
 verifyFuncExists = (name) => {
+    console.log("- - - - -", name, "- - - - - ")
     if(funcTable.has(name)) {
         // Function exists. Store its name in funcCalled to remember its name when generating ERA quadruple
         funcCalled.push(name)
@@ -289,6 +560,17 @@ verifyFuncExists = (name) => {
         // Function does not exist --> ERROR
         throw new Error(`Function does not exist.`)
     }
+}
+
+// Function that uses the name stored in currId and checks if it is registered as a function in funcTable
+funcStart = () => {
+    funcCalled.push(currId)
+    // console.log("-----", currId, "-----")
+    currId = null
+    if(!funcTable.has(funcCalled.peek())) {
+        throw new Error(`Function does not exist.`)
+    }
+    insertFakeBottom()
 }
 
 // Generate ERA quadruple and prepare for parameter matching
@@ -743,6 +1025,7 @@ generateGoToMainQuadruple = () => {
 // Also adds to funcSizes the count of global variables
 // Sets funcName to programName, which helps to know we are inside main and not another function
 mainStart = () => {
+    // console.log(funcTable.get(programName).varTable.get("mat"))
     quadruples[0].res = quadruples.length
     funcName = programName
 
@@ -766,6 +1049,8 @@ mainStart = () => {
     funcSizes.set("varsSizes", vars)
     // Create an entry for the temps, even though none have been counted (so initialize with 0s)
     funcSizes.set("tempsSizes", {int: 0, float: 0, char: 0})
+    // Create an entry for the pointers (initialize with 0s)
+    funcSizes.set("pointersSizes", {int: 0, float: 0, char: 0})
 }
 
 // Attaches funcSizes to the main function's entry in the funcTable. This contains the number of all variables used in it
@@ -822,8 +1107,8 @@ endStuff = () => {
     //     console.log(key, value)
     // }
 
-    //console.log("- - - CONSTANTS TABLE - - -")
-    //for(const [key, value] of constantsTable.entries()) {
+    // console.log("- - - CONSTANTS TABLE - - -")
+    // for(const [key, value] of constantsTable.entries()) {
     //    console.log(key, value)
-    //}
+    // }
 }

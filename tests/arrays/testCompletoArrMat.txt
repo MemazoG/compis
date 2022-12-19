@@ -1,0 +1,284 @@
+program testCompleto;
+
+vars {
+    arr[5]: int;
+    matA[2][2], matB[2][2], matRes[2][2]: int;
+    matX[3][2], matY[2][3], matZ[3][3]: int;
+    opcion, num: int;
+}
+
+function void llenaArr() {
+    vars {
+        x, val: int;
+        opcion: int;
+    }
+
+    x = 0;
+    while(x < 5) {
+        print("Ingrese el valor de la casilla", x);
+        read(val);
+        arr[x] = val;
+
+        x = x + 1;
+    }
+}
+
+function void llenaMatA() {
+    vars {
+        i, j, val: int;
+    }
+
+    i = 0;
+    while(i < 2) {
+        j = 0;
+        while(j < 2) {
+            print("Ingrese el valor de la casilla", i, j);
+            read(val);
+            matA[i][j] = val;
+
+            j = j + 1;
+        }
+        i = i + 1;
+    }
+}
+
+function void llenaMatB() {
+    vars {
+        i, j, val: int;
+    }
+
+    i = 0;
+    while(i < 2) {
+        j = 0;
+        while(j < 2) {
+            print("Ingrese el valor de la casilla", i, j);
+            read(val);
+            matB[i][j] = val;
+            
+            j = j + 1;
+        }
+        i = i + 1;
+    }
+}
+
+function void llenaMatX() {
+    vars {
+        i, j, val: int;
+    }
+
+    i = 0;
+    while(i < 3) {
+        j = 0;
+        while(j < 2) {
+            print("Ingrese el valor de la casilla", i, j);
+            read(val);
+            matX[i][j] = val;
+            
+            j = j + 1;
+        }
+        i = i + 1;
+    }
+}
+
+function void llenaMatY() {
+    vars {
+        i, j, val: int;
+    }
+
+    i = 0;
+    while(i < 2) {
+        j = 0;
+        while(j < 3) {
+            print("Ingrese el valor de la casilla", i, j);
+            read(val);
+            matY[i][j] = val;
+            
+            j = j + 1;
+        }
+        i = i + 1;
+    }
+}
+
+function void find(int n) {
+    vars {
+        encontrado, i: int;
+    }
+
+    encontrado = 0;
+    i = 0;
+    while((i < 5)) {
+        if(arr[i] == n) {
+            encontrado = 1;
+            i = 6;
+        }
+
+        i = i + 1;
+    }
+
+    if(encontrado) {
+        print("ENCONTRADO", "");
+    } else {
+        print("NO ENCONTRADO", "");
+    }
+}
+
+function void imprime() {
+    vars {
+        i: int;
+    }
+
+    i = 0;
+    print("");
+    while(i < 5) {
+        print(arr[i]);
+        i = i + 1;
+    }
+}
+
+function void sort() {
+    vars {
+        i, j, temp: int;
+    }
+
+    i = 0;
+    while(i < 5 - 1) {
+        j = 0;
+        while(j < 5 - i - 1) {
+            if(arr[j] > arr[j + 1]) {
+                temp = arr[j];
+                arr[j] = arr[j + 1];
+                arr[j + 1] = temp;
+            }
+            j = j + 1;
+        }
+
+        i = i + 1;
+    }
+
+    imprime();
+}
+
+function void inicializaMatFinal(int n) {
+    vars {
+        i, j: int;
+    }
+    i = 0;
+    while(i < n) {
+        j = 0;
+        while(j < n) {
+            if(n == 2) {
+                matRes[i][j] = 0;
+            } else {
+                matZ[i][j] = 0;
+            }
+            j = j + 1;
+        }
+        i = i + 1;
+    }
+}
+
+function void imprimeMatRes() {
+    vars {
+        i, j: int;
+    }
+
+    i = 0;
+    while(i < 2) {
+        j = 0;
+        while(j < 2) {
+            print(matRes[i][j]);
+            j = j + 1;
+        }
+        print("");
+        i = i + 1;
+    }
+}
+
+function void imprimeMatZ() {
+    vars {
+        i, j: int;
+    }
+
+    i = 0;
+    while(i < 3) {
+        j = 0;
+        while(j < 3) {
+            print(matZ[i][j]);
+            j = j + 1;
+        }
+        print("");
+        i = i + 1;
+    }
+}
+
+function void multMat(int caso, int r1, int c1, int r2, int c2) {
+    vars {
+        i, j, k: int;
+    }
+
+    i = 0;
+    while(i < r1) {
+        j = 0;
+        while(j < c2) {
+            k = 0;
+            while(k < c1) {
+                if(caso == 1) {
+                    matRes[i][j] = matRes[i][j] + (matA[i][k] * matB[k][j]);
+                } else {
+                    matZ[i][j] = matZ[i][j] + (matX[i][k] * matY[k][j]);
+                }
+                k = k + 1;
+            }
+            j = j + 1;
+        }
+        i = i + 1;
+    }
+
+    if(caso == 1) {
+        imprimeMatRes();
+    } else {
+        imprimeMatZ();
+    }
+}
+
+
+main() {
+    do {
+        print("1 Find sobre un arreglo");
+        print("2 Sort sobre un arreglo");
+        print("3 Multiplicacion de matrices 2x2");
+        print("4 Multiplicacion de matrices 3x2 y 2x3");
+        print("5 Salir", "");
+
+        print("Ingrese la opcion que desea ejecutar");
+        read(opcion);
+
+        if(opcion == 1) {
+            llenaArr();
+            print("Ingresa el numero que deseas buscar");
+            read(num);
+            find(num);
+        }
+        if(opcion == 2) {
+            llenaArr();
+            sort();
+        }
+        if(opcion == 3) {
+            inicializaMatFinal(2);
+            print("MATRIZ 1");
+            llenaMatA();
+            print("", "MATRIZ 2");
+            llenaMatB();
+            multMat(1, 2, 2, 2, 2);
+        }
+        if(opcion == 4) {
+            inicializaMatFinal(3);
+            print("MATRIZ 1");
+            llenaMatX();
+            print("", "MATRIZ 2");
+            llenaMatY();
+            multMat(2, 3, 2, 2, 3);
+        }
+    } while(opcion != 5);
+
+}

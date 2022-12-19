@@ -7,8 +7,8 @@
 class Memory {
     // Constructor receives one object with the number of vars and temps by type, and another object with the offset (starting vAddress) of each one
     constructor(
-        {intVars, floatVars, charVars, intTemps, floatTemps, charTemps},
-        {intVarsOff, floatVarsOff, charVarsOff, intTempsOff, floatTempsOff, charTempsOff}
+        {intVars, floatVars, charVars, intTemps, floatTemps, charTemps, intPointers, floatPointers, charPointers},
+        {intVarsOff, floatVarsOff, charVarsOff, intTempsOff, floatTempsOff, charTempsOff, intPointersOff, floatPointersOff, charPointersOff}
     ) {
         // Create memory DS
         this.memory = [
@@ -25,6 +25,12 @@ class Memory {
                 new Array(intTemps),
                 new Array(floatTemps),
                 new Array(charTemps)
+            ],
+            // Pointers
+            [
+                new Array(intPointers),
+                new Array(floatPointers),
+                new Array(charPointers)
             ]
         ]
 
@@ -35,6 +41,9 @@ class Memory {
         this.intTempsOff = intTempsOff
         this.floatTempsOff = floatTempsOff
         this.charTempsOff = charTempsOff
+        this.intPointersOff = intPointersOff
+        this.floatPointersOff = floatPointersOff
+        this.charPointersOff = charPointersOff
 
         // Counters to help with parameter value assignation
         this.intVarsCount = 0
@@ -43,20 +52,27 @@ class Memory {
         this.intTempsCount = 0
         this.floatTempsCount = 0
         this.charTempsCount = 0
+        this.intPointersCount = 0
+        this.floatPointersCount = 0
+        this.charPointersCount = 0
     }
 
     // Sets a value to a given address
     setValue(address, value, addrType) {
         let addrTypeIndex, type, typeIndex, index
 
-        // Get address type index (vars = 0, temps = 1)
+        // console.log("Valor", value, "a la dirección", address)
+        // Get address type index (vars = 0, temps = 1, pointers = 2)
         if(addrType === "vars") {
             addrTypeIndex = 0
-        } else {
+        } else if(addrType === "temps") {
             addrTypeIndex = 1
+        } else {
+            addrTypeIndex = 2
+            // console.log(addrTypeIndex)
         }
 
-        // Get type based on address and addrType (var/temp)
+        // Get type based on address and addrType (var/temp/pointer)
         type = this.getType(address, addrType)
 
         // Use type to get its index (int = 0, float = 1, char = 2)
@@ -69,11 +85,14 @@ class Memory {
         }
 
         // Get index by substracting its offset
+        // index = address - this.getOffset(addrType, type)
         index = address - this.getOffset(addrType, type)
+        // console.log("INDEX:", index)
 
         // Set the value in the given index
         this.memory[addrTypeIndex][typeIndex][index] = value
         // console.log(this.memory[addrTypeIndex][typeIndex])
+
 
         // Update respective counter
         if(addrType === "vars") {
@@ -84,13 +103,22 @@ class Memory {
             } else {
                 this.charVarsCount++
             }
-        } else {
+        } else if(addrType === "temps") {
             if(type === "int") {
                 this.intTempsCount++
             } else if(type === "float") {
                 this.floatTempsCount++
             } else {
                 this.charTempsCount++
+            }
+        } else {
+            if(type === "int") {
+                // console.log("Dirección recibida:", address)
+                this.intPointersCount++
+            } else if(type === "float") {
+                this.floatPointersCount++
+            } else {
+                this.charPointersCount++
             }
         }
     }
@@ -102,8 +130,10 @@ class Memory {
         // Get indices
         if(addrType === "vars") {
             addrTypeIndex = 0
-        } else {
+        } else if(addrType === "temps") {
             addrTypeIndex = 1
+        } else {
+            addrTypeIndex = 2
         }
 
         // console.log(address, type, addrType)
@@ -115,6 +145,14 @@ class Memory {
         } else {
             typeIndex = 2
         }
+
+        // if(addrTypeIndex === 2) {
+        //     console.log(addrType, "Te doy el valor de", address, ", que sin offset es la", address - this.getOffset(addrType, type))
+        //     console.log(this.memory[addrTypeIndex][typeIndex])
+        // }
+
+        // console.log(addrType, "Te doy el valor de", address, ", que sin offset es la", address - this.getOffset(addrType, type))
+        // console.log(this.memory[addrTypeIndex][typeIndex])
 
         index = address - this.getOffset(addrType, type)
 
@@ -150,6 +188,19 @@ class Memory {
             else {
                 return "char"
             }
+        } else { // POINTERS
+            // Between 17000 and 18000 (not including 18000)
+            if(address >= this.intPointersOff && address < this.floatPointersOff) {
+                return "int"
+            }
+            // Between 18000 and 19000 (not including 19000)
+            else if(address >= this.floatPointersOff && address < this.charPointersOff) {
+                return "float"
+            }
+            // Between 19000 and 20000 (not including 20000) 
+            else {
+                return "char"
+            }
         }
     }
 
@@ -166,13 +217,23 @@ class Memory {
             }
         }
         // Temps
-        else {
+        else if(addrType === "temps") {
             if(type === "int") {
                 return this.intTempsOff
             } else if(type === "float") {
                 return this.floatTempsOff
             } else {
                 return this.charTempsOff
+            }
+        }
+        // Pointers
+        else {
+            if(type === "int") {
+                return this.intPointersOff
+            } else if(type === "float") {
+                return this.floatPointersOff
+            } else {
+                return this.charPointersOff
             }
         }
     }

@@ -1,0 +1,23 @@
+program llenaArr;
+
+vars {
+    arr[5], x, num: int;
+}
+
+main() {
+    x = 0;
+    while(x < 5) {
+        print("Ingresa el valor de la casilla", x);
+        read(arr[x]);
+
+        x = x + 1;
+    }
+
+    print("", "El arreglo tiene los siguientes valores");
+
+    x = 0;
+    while(x < 5) {
+        print(arr[x]);
+        x = x + 1;
+    }
+}

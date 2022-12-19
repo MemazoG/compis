@@ -1,0 +1,36 @@
+program basic;
+
+vars {
+    x, arr[3], mat[2][2]: int;
+}
+
+function void sayHello() {
+    vars {
+        a: int;
+    }
+
+    a = 100;
+
+    print("Hello", a);
+}
+
+main() {
+    arr[0] = 1;
+    arr[1] = 2;
+    arr[2] = 3;
+
+    mat[0][0] = 10;
+    mat[0][1] = 20;
+    mat[1][0] = 30;
+    mat[1][1] = 40;
+
+    x = 1;
+    print("VARIABLE NORMAL");
+    print(x, "");
+    print("ARREGLO");
+    print(arr[0], arr[x], arr[2], "");
+    print("MATRIZ");
+    print(mat[0][0], mat[0][1], mat[1][0], mat[1][1], "");
+
+    sayHello();
+}
