@@ -1,0 +1,16 @@
+program test;
+
+vars {
+    arr[3]: int;
+}
+
+main() {
+    arr[0] = 0;
+    arr[1] = 1;
+    arr[2] = 2;
+
+    print(arr[0], arr[1], arr[2], "");
+
+    arr[arr[2] - arr[1]] = 500;
+    print(arr[0], arr[1], arr[2], "");
+}
